@@ -55,6 +55,41 @@ function buildFinalRunStatus(counters: RunCounters): RunStatus {
   return "failed";
 }
 
+async function notifyRunIssue(input: {
+  shop: string;
+  runId: number;
+  status: RunStatus;
+  errorNotifyEmail?: string | null;
+  counters: RunCounters;
+}) {
+  if (input.status === "succeeded") return;
+
+  const payload = {
+    type: "sync_run_issue",
+    shop: input.shop,
+    runId: input.runId,
+    status: input.status,
+    notifyEmail: input.errorNotifyEmail ?? null,
+    counters: input.counters,
+    createdAt: new Date().toISOString(),
+  };
+
+  console.warn("[sync-notify]", JSON.stringify(payload));
+
+  const webhook = process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
+  if (!webhook) return;
+
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("[sync-notify] webhook failed", error);
+  }
+}
+
 async function ensureAuthorized(request: Request) {
   const sharedSecret = process.env.CRON_SHARED_SECRET?.trim();
   if (!sharedSecret) return;
@@ -367,6 +402,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ? "No items provided. Run recorded with no-op."
           : "Sync core processing finished.",
     },
+  });
+
+  await notifyRunIssue({
+    shop: store.shop,
+    runId: run.id,
+    status: finalStatus,
+    errorNotifyEmail: store.errorNotifyEmail,
+    counters,
   });
 
   return Response.json(

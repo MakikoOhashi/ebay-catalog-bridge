@@ -68,6 +68,12 @@ model Store {
   id           Int           @id @default(autoincrement())
   shop         String        @unique
   createdAt    DateTime      @default(now()) @map("created_at")
+  syncFrequencyMinutes Int    @default(30) @map("sync_frequency_minutes")
+  syncFields    String       @default("title,description,images,weight,stock,price") @map("sync_fields")
+  priceSyncEnabled Boolean      @default(false) @map("price_sync_enabled")
+  fixedFxRate   Float        @default(150) @map("fixed_fx_rate")
+  roundRule     String       @default("nearest") @map("round_rule")
+  errorNotifyEmail String?   @map("error_notify_email")
   ebayAccounts EbayAccount[]
   skuLinks     SkuLink[]
   skuConflicts SkuConflict[]
