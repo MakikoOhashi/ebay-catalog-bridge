@@ -27,6 +27,10 @@ export default function SyncConsolePage() {
     <s-page heading="Sync Console">
       <s-section heading="Phase 3 quick actions">
         <s-stack direction="inline" gap="base">
+          <s-button href="/api/ebay/oauth/start?label=primary">
+            Connect eBay Account
+          </s-button>
+
           <s-button
             onClick={() => statusFetcher.load("/api/sync/status")}
             {...(statusFetcher.state !== "idle" ? { loading: true } : {})}
