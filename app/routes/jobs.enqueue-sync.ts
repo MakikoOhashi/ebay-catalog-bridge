@@ -1,12 +1,39 @@
-import { CheckpointMode, RunStatus } from "@prisma/client";
+import {
+  CheckpointMode,
+  ConflictStatus,
+  LinkSyncStatus,
+  RunStatus,
+} from "@prisma/client";
 import type { ActionFunctionArgs } from "react-router";
 import db from "../db.server";
 import { authenticate } from "../shopify.server";
+
+type SyncInputItem = {
+  sku?: string;
+  itemId?: string;
+  variationKey?: string;
+  lastModified?: string;
+};
 
 type EnqueueBody = {
   shop?: string;
   ebayAccountId?: number;
   mode?: "rolling" | "full";
+  cursor?: string | null;
+  nextCursor?: string | null;
+  fullScanComplete?: boolean;
+  items?: SyncInputItem[];
+};
+
+type RunCounters = {
+  totalItems: number;
+  processedItems: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  conflictCount: number;
+  missingCount: number;
+  errorCount: number;
 };
 
 function unauthorizedResponse() {
@@ -17,77 +44,335 @@ function parseMode(rawMode?: string): CheckpointMode {
   return rawMode === "full" ? CheckpointMode.full : CheckpointMode.rolling;
 }
 
+function parseLastModified(value?: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function buildFinalRunStatus(counters: RunCounters): RunStatus {
+  if (counters.errorCount === 0 && counters.conflictCount === 0) {
+    return RunStatus.succeeded;
+  }
+  if (counters.processedItems > 0) {
+    return RunStatus.partial;
+  }
+  return RunStatus.failed;
+}
+
+async function ensureAuthorized(request: Request) {
+  const sharedSecret = process.env.CRON_SHARED_SECRET?.trim();
+  if (!sharedSecret) return;
+
+  const token = request.headers.get("x-cron-secret")?.trim();
+  if (token === sharedSecret) return;
+
+  try {
+    await authenticate.admin(request);
+  } catch {
+    throw unauthorizedResponse();
+  }
+}
+
+async function parseRequestBody(request: Request): Promise<EnqueueBody> {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await request.json()) as EnqueueBody;
+  }
+
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    const form = await request.formData();
+    const ebayAccountIdRaw = form.get("ebayAccountId");
+    const parsedAccountId =
+      typeof ebayAccountIdRaw === "string" && ebayAccountIdRaw.length > 0
+        ? Number(ebayAccountIdRaw)
+        : undefined;
+
+    let parsedItems: SyncInputItem[] = [];
+    const itemsJson = form.get("itemsJson");
+    if (typeof itemsJson === "string" && itemsJson.trim().length > 0) {
+      try {
+        const candidate = JSON.parse(itemsJson);
+        if (Array.isArray(candidate)) {
+          parsedItems = candidate as SyncInputItem[];
+        }
+      } catch {
+        parsedItems = [];
+      }
+    }
+
+    return {
+      shop: form.get("shop")?.toString() || undefined,
+      mode: (form.get("mode")?.toString() as "rolling" | "full") || undefined,
+      ebayAccountId:
+        parsedAccountId !== undefined && Number.isFinite(parsedAccountId)
+          ? parsedAccountId
+          : undefined,
+      cursor: form.get("cursor")?.toString() || null,
+      nextCursor: form.get("nextCursor")?.toString() || null,
+      fullScanComplete: form.get("fullScanComplete")?.toString() === "true",
+      items: parsedItems,
+    };
+  }
+
+  return {};
+}
+
+async function resolveStore(shop: string) {
+  return db.store.upsert({
+    where: { shop },
+    create: { shop },
+    update: {},
+  });
+}
+
+async function resolveEbayAccount(storeId: number, requestedId?: number) {
+  if (requestedId) {
+    return db.ebayAccount.findFirst({
+      where: { id: requestedId, storeId },
+    });
+  }
+
+  const connected = await db.ebayAccount.findFirst({
+    where: { storeId, status: "connected" },
+    orderBy: { id: "asc" },
+  });
+
+  if (connected) return connected;
+
+  return db.ebayAccount.create({
+    data: {
+      storeId,
+      label: "stub-account-1",
+      refreshTokenEnc: "stub",
+      scopes: "",
+      status: "connected",
+    },
+  });
+}
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method.toUpperCase() !== "POST") {
     return Response.json({ error: "method_not_allowed" }, { status: 405 });
   }
 
-  const sharedSecret = process.env.CRON_SHARED_SECRET?.trim();
-  if (sharedSecret) {
-    const token = request.headers.get("x-cron-secret")?.trim();
-    if (token !== sharedSecret) {
-      try {
-        await authenticate.admin(request);
-      } catch {
-        return unauthorizedResponse();
-      }
-    }
+  try {
+    await ensureAuthorized(request);
+  } catch (response) {
+    return response as Response;
   }
 
   let body: EnqueueBody = {};
-  const contentType = request.headers.get("content-type") || "";
   try {
-    if (contentType.includes("application/json")) {
-      body = (await request.json()) as EnqueueBody;
-    } else if (
-      contentType.includes("application/x-www-form-urlencoded") ||
-      contentType.includes("multipart/form-data")
-    ) {
-      const form = await request.formData();
-      const ebayAccountIdRaw = form.get("ebayAccountId");
-      const parsedAccountId =
-        typeof ebayAccountIdRaw === "string" && ebayAccountIdRaw.length > 0
-          ? Number(ebayAccountIdRaw)
-          : undefined;
-
-      body = {
-        shop: form.get("shop")?.toString() || undefined,
-        mode: (form.get("mode")?.toString() as "rolling" | "full") || undefined,
-        ebayAccountId:
-          parsedAccountId !== undefined && Number.isFinite(parsedAccountId)
-            ? parsedAccountId
-            : undefined,
-      };
-    }
+    body = await parseRequestBody(request);
   } catch {
-    // Allow empty or non-JSON body to keep endpoint lightweight for simple pings.
+    body = {};
   }
 
   const shop = body.shop ?? "unknown-shop.local";
   const mode = parseMode(body.mode);
+  const items = Array.isArray(body.items) ? body.items : [];
 
-  const store = await db.store.upsert({
-    where: { shop },
-    create: { shop },
-    update: {},
-  });
+  const store = await resolveStore(shop);
+  const ebayAccount = await resolveEbayAccount(store.id, body.ebayAccountId);
+
+  if (!ebayAccount) {
+    return Response.json(
+      {
+        accepted: false,
+        error: "ebay_account_not_found",
+        shop,
+        storeId: store.id,
+      },
+      { status: 400 },
+    );
+  }
 
   const run = await db.syncRun.create({
     data: {
       storeId: store.id,
-      ebayAccountId: body.ebayAccountId ?? null,
+      ebayAccountId: ebayAccount.id,
       mode,
       status: RunStatus.running,
-      message: "Enqueued (stub): execution not implemented yet.",
+      message: "Sync started.",
     },
   });
 
+  const counters: RunCounters = {
+    totalItems: items.length,
+    processedItems: 0,
+    createdCount: 0,
+    updatedCount: 0,
+    skippedCount: 0,
+    conflictCount: 0,
+    missingCount: 0,
+    errorCount: 0,
+  };
+
+  for (const item of items) {
+    const sku = item.sku?.trim();
+    const ebayItemId = item.itemId?.trim() || null;
+    const incomingModified = parseLastModified(item.lastModified);
+
+    if (!sku) {
+      counters.errorCount += 1;
+      await db.syncError.create({
+        data: {
+          runId: run.id,
+          storeId: store.id,
+          ebayAccountId: ebayAccount.id,
+          errorCode: "SKU_MISSING",
+          errorMessage: "SKU is required for synchronization.",
+          ebayItemId,
+          payload: JSON.stringify(item),
+        },
+      });
+      continue;
+    }
+
+    const existing = await db.skuLink.findUnique({
+      where: { storeId_sku: { storeId: store.id, sku } },
+    });
+
+    if (existing && existing.ebayAccountId !== ebayAccount.id) {
+      counters.conflictCount += 1;
+      const accountIds = [existing.ebayAccountId, ebayAccount.id].sort(
+        (a, b) => a - b,
+      );
+      await db.skuConflict.upsert({
+        where: { storeId_sku: { storeId: store.id, sku } },
+        create: {
+          storeId: store.id,
+          sku,
+          foundInAccounts: JSON.stringify(accountIds),
+          status: ConflictStatus.open,
+        },
+        update: {
+          foundInAccounts: JSON.stringify(accountIds),
+          lastDetectedAt: new Date(),
+          status: ConflictStatus.open,
+        },
+      });
+
+      await db.skuLink.update({
+        where: { id: existing.id },
+        data: {
+          syncStatus: LinkSyncStatus.conflict,
+          lastError: `Conflict: detected in multiple accounts (${accountIds.join(", ")}).`,
+          lastSeenInRunId: run.id,
+        },
+      });
+      continue;
+    }
+
+    const shouldSkip =
+      Boolean(existing) &&
+      Boolean(existing?.ebayLastModified) &&
+      Boolean(incomingModified) &&
+      incomingModified!.getTime() <= existing!.ebayLastModified!.getTime();
+
+    if (shouldSkip && existing) {
+      counters.skippedCount += 1;
+      await db.skuLink.update({
+        where: { id: existing.id },
+        data: {
+          syncStatus: LinkSyncStatus.skipped,
+          lastSeenInRunId: run.id,
+          updatedAt: new Date(),
+        },
+      });
+      continue;
+    }
+
+    const upserted = await db.skuLink.upsert({
+      where: { storeId_sku: { storeId: store.id, sku } },
+      create: {
+        storeId: store.id,
+        sku,
+        ebayAccountId: ebayAccount.id,
+        ebayItemId,
+        ebayVariationKey: item.variationKey?.trim() || null,
+        ebayLastModified: incomingModified,
+        syncStatus: LinkSyncStatus.ok,
+        lastSyncAt: new Date(),
+        lastSeenInRunId: run.id,
+        lastError: null,
+      },
+      update: {
+        ebayAccountId: ebayAccount.id,
+        ebayItemId,
+        ebayVariationKey: item.variationKey?.trim() || null,
+        ebayLastModified: incomingModified,
+        syncStatus: LinkSyncStatus.ok,
+        lastSyncAt: new Date(),
+        lastSeenInRunId: run.id,
+        lastError: null,
+      },
+    });
+
+    counters.processedItems += 1;
+    if (existing) {
+      counters.updatedCount += 1;
+    } else {
+      counters.createdCount += 1;
+    }
+
+    // Keep local variable referenced so lint/typegen doesn't strip this path in future refactors.
+    void upserted.id;
+  }
+
+  if (body.fullScanComplete) {
+    const missingResult = await db.skuLink.updateMany({
+      where: {
+        storeId: store.id,
+        ebayAccountId: ebayAccount.id,
+        lastSeenInRunId: { not: run.id },
+      },
+      data: {
+        syncStatus: LinkSyncStatus.missing_on_ebay,
+        lastError: "SKU not detected in the latest completed full scan.",
+      },
+    });
+    counters.missingCount = missingResult.count;
+  }
+
+  await db.syncCheckpoint.upsert({
+    where: { ebayAccountId: ebayAccount.id },
+    create: {
+      ebayAccountId: ebayAccount.id,
+      cursor: body.nextCursor ?? body.cursor ?? null,
+      mode,
+      lastError: counters.errorCount > 0 ? "Run completed with errors." : null,
+    },
+    update: {
+      cursor: body.nextCursor ?? body.cursor ?? null,
+      mode,
+      lastError: counters.errorCount > 0 ? "Run completed with errors." : null,
+    },
+  });
+
+  const finalStatus = buildFinalRunStatus(counters);
   await db.syncRun.update({
     where: { id: run.id },
     data: {
-      status: RunStatus.succeeded,
+      status: finalStatus,
       endedAt: new Date(),
-      message: "Stub run completed successfully.",
+      totalItems: counters.totalItems,
+      processedItems: counters.processedItems,
+      createdCount: counters.createdCount,
+      updatedCount: counters.updatedCount,
+      skippedCount: counters.skippedCount,
+      conflictCount: counters.conflictCount,
+      missingCount: counters.missingCount,
+      errorCount: counters.errorCount,
+      message:
+        items.length === 0
+          ? "No items provided. Run recorded with no-op."
+          : "Sync core processing finished.",
     },
   });
 
@@ -96,9 +381,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       accepted: true,
       jobId: run.id,
       mode,
-      storeId: store.id,
       shop,
-      note: "This is a phase-2 stub. Full sync worker is not implemented yet.",
+      storeId: store.id,
+      ebayAccountId: ebayAccount.id,
+      counters,
+      note: "Phase-3 core sync executed for provided input items.",
     },
     { status: 200 },
   );

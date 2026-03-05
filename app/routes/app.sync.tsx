@@ -25,7 +25,7 @@ export default function SyncConsolePage() {
 
   return (
     <s-page heading="Sync Console">
-      <s-section heading="Phase 2 quick actions">
+      <s-section heading="Phase 3 quick actions">
         <s-stack direction="inline" gap="base">
           <s-button
             onClick={() => statusFetcher.load("/api/sync/status")}
@@ -37,11 +37,23 @@ export default function SyncConsolePage() {
           <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
             <input type="hidden" name="shop" value={shop} />
             <input type="hidden" name="mode" value="rolling" />
+            <label style={{ display: "grid", gap: 6 }}>
+              <span>Items JSON (optional)</span>
+              <textarea
+                name="itemsJson"
+                rows={8}
+                defaultValue={`[
+  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"},
+  {"sku":"SKU-002","itemId":"ITEM-002","lastModified":"2026-03-05T00:05:00Z"}
+]`}
+                style={{ minWidth: 420 }}
+              />
+            </label>
             <s-button
               type="submit"
               {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}
             >
-              Enqueue Stub Sync
+              Enqueue Core Sync
             </s-button>
           </enqueueFetcher.Form>
         </s-stack>
