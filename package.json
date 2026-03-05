@@ -15,6 +15,8 @@
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
     "prisma": "prisma",
+    "prisma:pg:generate": "prisma generate --schema prisma/schema.postgres.prisma",
+    "prisma:pg:migrate": "prisma migrate deploy --schema prisma/schema.postgres.prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit"
