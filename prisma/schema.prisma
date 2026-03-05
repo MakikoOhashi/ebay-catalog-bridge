@@ -13,11 +13,42 @@ datasource db {
   url      = "file:dev.sqlite"
 }
 
+enum AccountStatus {
+  connected
+  revoked
+  error
+}
+
+enum LinkSyncStatus {
+  ok
+  skipped
+  conflict
+  missing_on_ebay
+  error
+}
+
+enum ConflictStatus {
+  open
+  resolved
+}
+
+enum CheckpointMode {
+  rolling
+  full
+}
+
+enum RunStatus {
+  running
+  succeeded
+  failed
+  partial
+}
+
 model Session {
-  id            String    @id
+  id            String   @id
   shop          String
   state         String
-  isOnline      Boolean   @default(false)
+  isOnline      Boolean  @default(false)
   scope         String?
   expires       DateTime?
   accessToken   String
@@ -31,4 +62,135 @@ model Session {
   emailVerified Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+}
+
+model Store {
+  id           Int           @id @default(autoincrement())
+  shop         String        @unique
+  createdAt    DateTime      @default(now()) @map("created_at")
+  ebayAccounts EbayAccount[]
+  skuLinks     SkuLink[]
+  skuConflicts SkuConflict[]
+  syncRuns     SyncRun[]
+  syncErrors   SyncError[]
+
+  @@map("stores")
+}
+
+model EbayAccount {
+  id              Int           @id @default(autoincrement())
+  storeId         Int           @map("store_id")
+  label           String
+  ebayUserId      String?       @map("ebay_user_id")
+  refreshTokenEnc String        @map("refresh_token_enc")
+  scopes          String
+  status          AccountStatus @default(connected)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  store           Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  skuLinks        SkuLink[]
+  checkpoint      SyncCheckpoint?
+  syncRuns        SyncRun[]
+  syncErrors      SyncError[]
+
+  @@unique([storeId, label])
+  @@index([storeId])
+  @@map("ebay_accounts")
+}
+
+model SkuLink {
+  id               Int            @id @default(autoincrement())
+  storeId          Int            @map("store_id")
+  sku              String
+  ebayAccountId    Int            @map("ebay_account_id")
+  ebayItemId       String?        @map("ebay_item_id")
+  ebayVariationKey String?        @map("ebay_variation_key")
+  ebayLastModified DateTime?      @map("ebay_last_modified")
+  shopifyProductId String?        @map("shopify_product_id")
+  shopifyVariantId String?        @map("shopify_variant_id")
+  syncStatus       LinkSyncStatus @default(ok) @map("sync_status")
+  lastSyncAt       DateTime?      @map("last_sync_at")
+  lastSeenInRunId  Int?           @map("last_seen_in_run_id")
+  lastError        String?        @map("last_error")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  store            Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ebayAccount      EbayAccount    @relation(fields: [ebayAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, sku])
+  @@index([storeId, syncStatus])
+  @@index([ebayAccountId])
+  @@map("sku_links")
+}
+
+model SkuConflict {
+  id              Int            @id @default(autoincrement())
+  storeId         Int            @map("store_id")
+  sku             String
+  foundInAccounts String         @map("found_in_accounts")
+  firstDetectedAt DateTime       @default(now()) @map("first_detected_at")
+  lastDetectedAt  DateTime       @default(now()) @map("last_detected_at")
+  status          ConflictStatus @default(open)
+  note            String?
+  store           Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, sku])
+  @@index([storeId, status])
+  @@map("sku_conflicts")
+}
+
+model SyncCheckpoint {
+  ebayAccountId Int            @id @map("ebay_account_id")
+  cursor        String?
+  mode          CheckpointMode @default(rolling)
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  lastError     String?        @map("last_error")
+  ebayAccount   EbayAccount    @relation(fields: [ebayAccountId], references: [id], onDelete: Cascade)
+
+  @@map("sync_checkpoint")
+}
+
+model SyncRun {
+  id             Int            @id @default(autoincrement())
+  storeId        Int            @map("store_id")
+  ebayAccountId  Int?           @map("ebay_account_id")
+  mode           CheckpointMode
+  startedAt      DateTime       @default(now()) @map("started_at")
+  endedAt        DateTime?      @map("ended_at")
+  status         RunStatus      @default(running)
+  totalItems     Int            @default(0) @map("total_items")
+  processedItems Int            @default(0) @map("processed_items")
+  createdCount   Int            @default(0) @map("created_count")
+  updatedCount   Int            @default(0) @map("updated_count")
+  skippedCount   Int            @default(0) @map("skipped_count")
+  conflictCount  Int            @default(0) @map("conflict_count")
+  missingCount   Int            @default(0) @map("missing_count")
+  errorCount     Int            @default(0) @map("error_count")
+  message        String?
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ebayAccount    EbayAccount?   @relation(fields: [ebayAccountId], references: [id], onDelete: SetNull)
+  syncErrors     SyncError[]
+
+  @@index([storeId, startedAt(sort: Desc)])
+  @@map("sync_runs")
+}
+
+model SyncError {
+  id           Int          @id @default(autoincrement())
+  runId        Int          @map("run_id")
+  storeId      Int          @map("store_id")
+  ebayAccountId Int?        @map("ebay_account_id")
+  sku          String?
+  ebayItemId   String?      @map("ebay_item_id")
+  errorCode    String?      @map("error_code")
+  errorMessage String       @map("error_message")
+  payload      String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  run          SyncRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ebayAccount  EbayAccount? @relation(fields: [ebayAccountId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([storeId, createdAt(sort: Desc)])
+  @@map("sync_errors")
 }
