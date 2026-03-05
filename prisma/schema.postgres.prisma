@@ -75,7 +75,7 @@ model Store {
   syncRuns     SyncRun[]
   syncErrors   SyncError[]
 
-  @@map("stores")
+  @@map("ebay_stores")
 }
 
 model EbayAccount {
@@ -121,7 +121,7 @@ model SkuLink {
   @@unique([storeId, sku])
   @@index([storeId, syncStatus])
   @@index([ebayAccountId])
-  @@map("sku_links")
+  @@map("ebay_sku_links")
 }
 
 model SkuConflict {
@@ -137,7 +137,7 @@ model SkuConflict {
 
   @@unique([storeId, sku])
   @@index([storeId, status])
-  @@map("sku_conflicts")
+  @@map("ebay_sku_conflicts")
 }
 
 model SyncCheckpoint {
@@ -148,7 +148,7 @@ model SyncCheckpoint {
   lastError     String?        @map("last_error")
   ebayAccount   EbayAccount    @relation(fields: [ebayAccountId], references: [id], onDelete: Cascade)
 
-  @@map("sync_checkpoint")
+  @@map("ebay_sync_checkpoint")
 }
 
 model SyncRun {
@@ -173,7 +173,7 @@ model SyncRun {
   syncErrors     SyncError[]
 
   @@index([storeId, startedAt(sort: Desc)])
-  @@map("sync_runs")
+  @@map("ebay_sync_runs")
 }
 
 model SyncError {
@@ -193,5 +193,5 @@ model SyncError {
 
   @@index([runId])
   @@index([storeId, createdAt(sort: Desc)])
-  @@map("sync_errors")
+  @@map("ebay_sync_errors")
 }
