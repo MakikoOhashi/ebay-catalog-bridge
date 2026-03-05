@@ -1,9 +1,4 @@
-import {
-  CheckpointMode,
-  ConflictStatus,
-  LinkSyncStatus,
-  RunStatus,
-} from "@prisma/client";
+import type { CheckpointMode, RunStatus } from "@prisma/client";
 import type { ActionFunctionArgs } from "react-router";
 import db from "../db.server";
 import { authenticate } from "../shopify.server";
@@ -41,7 +36,7 @@ function unauthorizedResponse() {
 }
 
 function parseMode(rawMode?: string): CheckpointMode {
-  return rawMode === "full" ? CheckpointMode.full : CheckpointMode.rolling;
+  return rawMode === "full" ? "full" : "rolling";
 }
 
 function parseLastModified(value?: string): Date | null {
@@ -52,12 +47,12 @@ function parseLastModified(value?: string): Date | null {
 
 function buildFinalRunStatus(counters: RunCounters): RunStatus {
   if (counters.errorCount === 0 && counters.conflictCount === 0) {
-    return RunStatus.succeeded;
+    return "succeeded";
   }
   if (counters.processedItems > 0) {
-    return RunStatus.partial;
+    return "partial";
   }
-  return RunStatus.failed;
+  return "failed";
 }
 
 async function ensureAuthorized(request: Request) {
@@ -197,7 +192,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       storeId: store.id,
       ebayAccountId: ebayAccount.id,
       mode,
-      status: RunStatus.running,
+      status: "running",
       message: "Sync started.",
     },
   });
@@ -249,19 +244,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           storeId: store.id,
           sku,
           foundInAccounts: JSON.stringify(accountIds),
-          status: ConflictStatus.open,
+          status: "open",
         },
         update: {
           foundInAccounts: JSON.stringify(accountIds),
           lastDetectedAt: new Date(),
-          status: ConflictStatus.open,
+          status: "open",
         },
       });
 
       await db.skuLink.update({
         where: { id: existing.id },
         data: {
-          syncStatus: LinkSyncStatus.conflict,
+          syncStatus: "conflict",
           lastError: `Conflict: detected in multiple accounts (${accountIds.join(", ")}).`,
           lastSeenInRunId: run.id,
         },
@@ -280,7 +275,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db.skuLink.update({
         where: { id: existing.id },
         data: {
-          syncStatus: LinkSyncStatus.skipped,
+          syncStatus: "skipped",
           lastSeenInRunId: run.id,
           updatedAt: new Date(),
         },
@@ -288,7 +283,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       continue;
     }
 
-    const upserted = await db.skuLink.upsert({
+    await db.skuLink.upsert({
       where: { storeId_sku: { storeId: store.id, sku } },
       create: {
         storeId: store.id,
@@ -297,7 +292,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ebayItemId,
         ebayVariationKey: item.variationKey?.trim() || null,
         ebayLastModified: incomingModified,
-        syncStatus: LinkSyncStatus.ok,
+        syncStatus: "ok",
         lastSyncAt: new Date(),
         lastSeenInRunId: run.id,
         lastError: null,
@@ -307,7 +302,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ebayItemId,
         ebayVariationKey: item.variationKey?.trim() || null,
         ebayLastModified: incomingModified,
-        syncStatus: LinkSyncStatus.ok,
+        syncStatus: "ok",
         lastSyncAt: new Date(),
         lastSeenInRunId: run.id,
         lastError: null,
@@ -321,8 +316,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       counters.createdCount += 1;
     }
 
-    // Keep local variable referenced so lint/typegen doesn't strip this path in future refactors.
-    void upserted.id;
   }
 
   if (body.fullScanComplete) {
@@ -333,7 +326,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         lastSeenInRunId: { not: run.id },
       },
       data: {
-        syncStatus: LinkSyncStatus.missing_on_ebay,
+        syncStatus: "missing_on_ebay",
         lastError: "SKU not detected in the latest completed full scan.",
       },
     });
