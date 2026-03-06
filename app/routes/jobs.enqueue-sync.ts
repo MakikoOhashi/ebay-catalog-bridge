@@ -228,6 +228,7 @@ async function fetchInventoryPage(input: {
       method: "GET",
       headers: {
         Authorization: `Bearer ${input.accessToken}`,
+        "Accept-Language": process.env.EBAY_ACCEPT_LANGUAGE || "en-US",
       },
     },
     3,
