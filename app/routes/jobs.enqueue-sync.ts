@@ -1075,18 +1075,98 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     typeof body.fullScanComplete === "boolean" ? body.fullScanComplete : source === "ebay_api" && nextOffset === null;
 
   if (fullScanComplete) {
-    const missingResult = await db.skuLink.updateMany({
+    const missingLinks = await db.skuLink.findMany({
       where: {
         storeId: store.id,
         ebayAccountId: ebayAccount.id,
         lastSeenInRunId: { not: run.id },
       },
-      data: {
-        syncStatus: "missing_on_ebay",
-        lastError: "SKU not detected in the latest completed full scan.",
+      select: {
+        id: true,
+        sku: true,
+        shopifyProductId: true,
+        shopifyVariantId: true,
       },
     });
-    counters.missingCount = missingResult.count;
+
+    counters.missingCount = missingLinks.length;
+
+    for (const missing of missingLinks) {
+      let nextStatus: "missing_on_ebay" | "error" = "missing_on_ebay";
+      let lastError = "SKU not detected in the latest completed full scan.";
+
+      const hasMapping = Boolean(missing.shopifyProductId) && Boolean(missing.shopifyVariantId);
+      if (hasMapping) {
+        if (!shopifyAdmin || !locationId) {
+          nextStatus = "error";
+          lastError =
+            "Missing Shopify admin/location context while setting missing SKU inventory to zero.";
+        } else {
+          try {
+            const inventoryRef = await getVariantInventoryRef(
+              shopifyAdmin,
+              missing.shopifyVariantId as string,
+            );
+            if (!inventoryRef.inventoryItemId) {
+              nextStatus = "error";
+              lastError = "No inventory item found for missing SKU Shopify variant.";
+            } else {
+              if (inventoryRef.tracked === false) {
+                const trackError = await ensureInventoryTracking(
+                  shopifyAdmin,
+                  inventoryRef.inventoryItemId,
+                );
+                if (trackError) {
+                  nextStatus = "error";
+                  lastError = `Failed to enable inventory tracking: ${trackError}`;
+                }
+              }
+
+              if (nextStatus !== "error") {
+                const setQtyError = await setShopifyAvailableQuantity({
+                  admin: shopifyAdmin,
+                  inventoryItemId: inventoryRef.inventoryItemId,
+                  locationId,
+                  quantity: 0,
+                });
+                if (setQtyError) {
+                  nextStatus = "error";
+                  lastError = `Failed to set missing SKU inventory to zero: ${setQtyError}`;
+                }
+              }
+            }
+          } catch (error) {
+            nextStatus = "error";
+            lastError =
+              error instanceof Error
+                ? error.message
+                : "Unknown error while applying missing SKU stock=0.";
+          }
+        }
+      }
+
+      await db.skuLink.update({
+        where: { id: missing.id },
+        data: {
+          syncStatus: nextStatus,
+          lastError,
+        },
+      });
+
+      if (nextStatus === "error") {
+        counters.errorCount += 1;
+        await db.syncError.create({
+          data: {
+            runId: run.id,
+            storeId: store.id,
+            ebayAccountId: ebayAccount.id,
+            sku: missing.sku,
+            errorCode: "SHOPIFY_MISSING_STOCK_ZERO_FAILED",
+            errorMessage: lastError,
+          },
+        });
+      }
+    }
   }
 
   const checkpointCursor =
