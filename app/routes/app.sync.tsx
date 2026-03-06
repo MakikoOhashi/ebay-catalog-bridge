@@ -93,6 +93,7 @@ export default function SyncConsolePage() {
         <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
           <input type="hidden" name="shop" value={shop} />
           <input type="hidden" name="mode" value="rolling" />
+          <input type="hidden" name="fullScanComplete" value="false" />
           <label style={{ display: "grid", gap: 6 }}>
             <span>Items JSON (optional)</span>
             <textarea
@@ -104,6 +105,10 @@ export default function SyncConsolePage() {
 ]`}
               style={{ minWidth: 420 }}
             />
+          </label>
+          <label style={{ display: "inline-flex", gap: 8 }}>
+            <input type="checkbox" name="fullScanComplete" value="true" />
+            <span>Force full scan complete (apply missing_on_ebay)</span>
           </label>
           <s-button
             type="submit"
