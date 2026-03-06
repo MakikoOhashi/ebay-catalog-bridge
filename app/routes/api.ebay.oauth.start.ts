@@ -30,8 +30,35 @@ function getAuthBaseUrl() {
     : "https://auth.ebay.com/oauth2/authorize";
 }
 
+function isValidShop(value: string | null) {
+  if (!value) return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/.test(value);
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const url = new URL(request.url);
+  let shop: string | null = null;
+  try {
+    const { session } = await authenticate.admin(request);
+    shop = session.shop;
+  } catch {
+    const requestedShop = url.searchParams.get("shop");
+    if (isValidShop(requestedShop)) {
+      shop = requestedShop;
+    }
+  }
+
+  if (!shop) {
+    return Response.json(
+      {
+        error: "shop_required",
+        detail:
+          "Open this route from /app/sync or provide ?shop={your-shop}.myshopify.com",
+      },
+      { status: 400 },
+    );
+  }
+
   const clientId = process.env.EBAY_CLIENT_ID;
   const redirectUri = process.env.EBAY_REDIRECT_URI;
 
@@ -45,7 +72,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
   }
 
-  const url = new URL(request.url);
   const requestedAccountId = url.searchParams.get("accountId");
   const requestedLabel = url.searchParams.get("label") || "primary";
   const scopes = (
@@ -54,7 +80,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ).trim();
 
   const payload: OAuthStatePayload = {
-    shop: session.shop,
+    shop,
     nonce: randomUUID(),
     ts: Date.now(),
     label: requestedLabel,

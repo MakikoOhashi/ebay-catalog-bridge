@@ -51,7 +51,10 @@ export default function SyncConsolePage() {
     <s-page heading="Sync Console">
       <s-section heading="Quick Actions">
         <s-stack direction="inline" gap="base">
-          <s-button href="/api/ebay/oauth/start?label=primary">
+          <s-button
+            href={`/api/ebay/oauth/start?label=primary&shop=${encodeURIComponent(shop)}`}
+            target="_blank"
+          >
             Connect eBay Account
           </s-button>
           <s-button
