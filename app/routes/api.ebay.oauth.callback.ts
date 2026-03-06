@@ -160,7 +160,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
       });
       throw redirect(
-        `/app/sync?shop=${encodeURIComponent(parsedState.shop)}&ebay_connected=1&account_id=${target.id}`,
+        `/oauth/ebay/done?status=connected&shop=${encodeURIComponent(parsedState.shop)}&account_id=${target.id}`,
       );
     }
   }
@@ -177,6 +177,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   throw redirect(
-    `/app/sync?shop=${encodeURIComponent(parsedState.shop)}&ebay_connected=1&account_id=${created.id}`,
+    `/oauth/ebay/done?status=connected&shop=${encodeURIComponent(parsedState.shop)}&account_id=${created.id}`,
   );
 };
