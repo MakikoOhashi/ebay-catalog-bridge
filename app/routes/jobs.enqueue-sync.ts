@@ -17,7 +17,38 @@ type EnqueueBody = {
   cursor?: string | null;
   nextCursor?: string | null;
   fullScanComplete?: boolean;
+  limit?: number;
   items?: SyncInputItem[];
+};
+
+type EbayInventoryItem = {
+  sku?: string;
+  product?: {
+    title?: string;
+    description?: string;
+    imageUrls?: string[];
+  };
+  availability?: {
+    shipToLocationAvailability?: {
+      quantity?: number;
+    };
+  };
+};
+
+type EbayInventoryPage = {
+  inventoryItems?: EbayInventoryItem[];
+  next?: string;
+  total?: number;
+  limit?: number;
+};
+
+type EbayTokenResponse = {
+  access_token?: string;
+  token_type?: string;
+  expires_in?: number;
+  scope?: string;
+  error?: string;
+  error_description?: string;
 };
 
 type RunCounters = {
@@ -90,6 +121,133 @@ async function notifyRunIssue(input: {
   }
 }
 
+function getEbayApiBaseUrl() {
+  return process.env.EBAY_ENV === "sandbox"
+    ? "https://api.sandbox.ebay.com"
+    : "https://api.ebay.com";
+}
+
+function getEbayIdentityBaseUrl() {
+  return process.env.EBAY_ENV === "sandbox"
+    ? "https://api.sandbox.ebay.com"
+    : "https://api.ebay.com";
+}
+
+function toBasicAuth(id: string, secret: string) {
+  return Buffer.from(`${id}:${secret}`).toString("base64");
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  attempts = 3,
+): Promise<Response> {
+  let lastResponse: Response | null = null;
+
+  for (let i = 0; i < attempts; i += 1) {
+    const response = await fetch(input, init);
+    if (response.status !== 429 && (response.status < 500 || response.status > 599)) {
+      return response;
+    }
+    lastResponse = response;
+    if (i < attempts - 1) {
+      await sleep(300 * 2 ** i);
+    }
+  }
+
+  return lastResponse as Response;
+}
+
+function parseNextOffset(next?: string | null): number | null {
+  if (!next) return null;
+  try {
+    const url = new URL(next, "https://api.ebay.com");
+    const offset = Number(url.searchParams.get("offset"));
+    return Number.isFinite(offset) ? offset : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getAccessToken(refreshToken: string, scopes: string) {
+  const clientId = process.env.EBAY_CLIENT_ID;
+  const clientSecret = process.env.EBAY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing EBAY_CLIENT_ID or EBAY_CLIENT_SECRET.");
+  }
+
+  const scopeString = scopes
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" ");
+
+  const res = await fetchWithRetry(
+    `${getEbayIdentityBaseUrl()}/identity/v1/oauth2/token`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${toBasicAuth(clientId, clientSecret)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        ...(scopeString ? { scope: scopeString } : {}),
+      }),
+    },
+    3,
+  );
+
+  const json = (await res.json()) as EbayTokenResponse;
+  if (!res.ok || !json.access_token) {
+    throw new Error(
+      `eBay token exchange failed (${res.status}): ${json.error || "unknown_error"} ${json.error_description || ""}`,
+    );
+  }
+
+  return json.access_token;
+}
+
+async function fetchInventoryPage(input: {
+  accessToken: string;
+  limit: number;
+  offset: number;
+}) {
+  const url = new URL(`${getEbayApiBaseUrl()}/sell/inventory/v1/inventory_item`);
+  url.searchParams.set("limit", String(input.limit));
+  url.searchParams.set("offset", String(input.offset));
+
+  const response = await fetchWithRetry(
+    url,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    },
+    3,
+  );
+
+  const text = await response.text();
+  let json: EbayInventoryPage | Record<string, unknown> = {};
+  try {
+    json = JSON.parse(text) as EbayInventoryPage;
+  } catch {
+    throw new Error(`eBay inventory response parse failed (${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`eBay inventory fetch failed (${response.status}): ${JSON.stringify(json)}`);
+  }
+
+  return json as EbayInventoryPage;
+}
+
 async function ensureAuthorized(request: Request) {
   const sharedSecret = process.env.CRON_SHARED_SECRET?.trim();
   if (!sharedSecret) return;
@@ -142,6 +300,7 @@ async function parseRequestBody(request: Request): Promise<EnqueueBody> {
         parsedAccountId !== undefined && Number.isFinite(parsedAccountId)
           ? parsedAccountId
           : undefined,
+      limit: Number(form.get("limit") || 50),
       cursor: form.get("cursor")?.toString() || null,
       nextCursor: form.get("nextCursor")?.toString() || null,
       fullScanComplete: form.get("fullScanComplete")?.toString() === "true",
@@ -167,21 +326,9 @@ async function resolveEbayAccount(storeId: number, requestedId?: number) {
     });
   }
 
-  const connected = await db.ebayAccount.findFirst({
+  return db.ebayAccount.findFirst({
     where: { storeId, status: "connected" },
     orderBy: { id: "asc" },
-  });
-
-  if (connected) return connected;
-
-  return db.ebayAccount.create({
-    data: {
-      storeId,
-      label: "stub-account-1",
-      refreshTokenEnc: "stub",
-      scopes: "",
-      status: "connected",
-    },
   });
 }
 
@@ -205,8 +352,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const shop = body.shop ?? "unknown-shop.local";
   const mode = parseMode(body.mode);
-  const items = Array.isArray(body.items) ? body.items : [];
-
   const store = await resolveStore(shop);
   const ebayAccount = await resolveEbayAccount(store.id, body.ebayAccountId);
 
@@ -233,7 +378,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   });
 
   const counters: RunCounters = {
-    totalItems: items.length,
+    totalItems: 0,
     processedItems: 0,
     createdCount: 0,
     updatedCount: 0,
@@ -243,7 +388,58 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     errorCount: 0,
   };
 
-  for (const item of items) {
+  let inputItems: SyncInputItem[] = Array.isArray(body.items) ? body.items : [];
+  let source: "manual" | "ebay_api" = "manual";
+  let nextOffset: number | null = null;
+
+  try {
+    if (inputItems.length === 0) {
+      source = "ebay_api";
+      const checkpoint = await db.syncCheckpoint.findUnique({
+        where: { ebayAccountId: ebayAccount.id },
+        select: { cursor: true },
+      });
+
+      const fallbackScopes =
+        process.env.EBAY_OAUTH_SCOPES ||
+        "https://api.ebay.com/oauth/api_scope/sell.inventory.readonly";
+      const accessToken = await getAccessToken(
+        ebayAccount.refreshTokenEnc,
+        ebayAccount.scopes || fallbackScopes,
+      );
+
+      const requestedLimit = Number.isFinite(body.limit) ? Number(body.limit) : 50;
+      const limit = Math.max(1, Math.min(200, requestedLimit || 50));
+      const initialOffset = body.cursor ?? checkpoint?.cursor;
+      const offset = Number.isFinite(Number(initialOffset)) ? Number(initialOffset) : 0;
+
+      const page = await fetchInventoryPage({ accessToken, limit, offset });
+      const fetchedItems = Array.isArray(page.inventoryItems) ? page.inventoryItems : [];
+      inputItems = fetchedItems.map((it) => ({
+        sku: it.sku,
+        itemId: undefined,
+        variationKey: undefined,
+        lastModified: undefined,
+      }));
+      nextOffset = parseNextOffset(page.next || null);
+      counters.totalItems = inputItems.length;
+    }
+  } catch (error) {
+    counters.errorCount += 1;
+    await db.syncError.create({
+      data: {
+        runId: run.id,
+        storeId: store.id,
+        ebayAccountId: ebayAccount.id,
+        errorCode: "EBAY_FETCH_ERROR",
+        errorMessage: error instanceof Error ? error.message : "Unknown eBay fetch error.",
+      },
+    });
+  }
+
+  counters.totalItems = Math.max(counters.totalItems, inputItems.length);
+
+  for (const item of inputItems) {
     const sku = item.sku?.trim();
     const ebayItemId = item.itemId?.trim() || null;
     const incomingModified = parseLastModified(item.lastModified);
@@ -270,9 +466,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (existing && existing.ebayAccountId !== ebayAccount.id) {
       counters.conflictCount += 1;
-      const accountIds = [existing.ebayAccountId, ebayAccount.id].sort(
-        (a, b) => a - b,
-      );
+      const accountIds = [existing.ebayAccountId, ebayAccount.id].sort((a, b) => a - b);
       await db.skuConflict.upsert({
         where: { storeId_sku: { storeId: store.id, sku } },
         create: {
@@ -350,10 +544,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } else {
       counters.createdCount += 1;
     }
-
   }
 
-  if (body.fullScanComplete) {
+  const fullScanComplete =
+    typeof body.fullScanComplete === "boolean" ? body.fullScanComplete : source === "ebay_api" && nextOffset === null;
+
+  if (fullScanComplete) {
     const missingResult = await db.skuLink.updateMany({
       where: {
         storeId: store.id,
@@ -368,16 +564,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     counters.missingCount = missingResult.count;
   }
 
+  const checkpointCursor =
+    source === "ebay_api"
+      ? nextOffset !== null
+        ? String(nextOffset)
+        : null
+      : body.nextCursor ?? body.cursor ?? null;
+
   await db.syncCheckpoint.upsert({
     where: { ebayAccountId: ebayAccount.id },
     create: {
       ebayAccountId: ebayAccount.id,
-      cursor: body.nextCursor ?? body.cursor ?? null,
+      cursor: checkpointCursor,
       mode,
       lastError: counters.errorCount > 0 ? "Run completed with errors." : null,
     },
     update: {
-      cursor: body.nextCursor ?? body.cursor ?? null,
+      cursor: checkpointCursor,
       mode,
       lastError: counters.errorCount > 0 ? "Run completed with errors." : null,
     },
@@ -398,9 +601,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       missingCount: counters.missingCount,
       errorCount: counters.errorCount,
       message:
-        items.length === 0
-          ? "No items provided. Run recorded with no-op."
-          : "Sync core processing finished.",
+        inputItems.length === 0
+          ? "No items processed."
+          : source === "ebay_api"
+            ? "Sync core processing finished (source: eBay API)."
+            : "Sync core processing finished (source: manual items).",
     },
   });
 
@@ -420,8 +625,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       shop,
       storeId: store.id,
       ebayAccountId: ebayAccount.id,
+      source,
+      checkpointCursor,
+      fullScanComplete,
       counters,
-      note: "Phase-3 core sync executed for provided input items.",
+      note:
+        source === "ebay_api"
+          ? "Phase-3 core sync executed with eBay Inventory API page fetch."
+          : "Phase-3 core sync executed for provided input items.",
     },
     { status: 200 },
   );
