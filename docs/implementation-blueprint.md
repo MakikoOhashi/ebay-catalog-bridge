@@ -257,7 +257,7 @@ function runSyncForAccount(storeId, ebayAccountId, mode = "rolling"):
 
 ## 4. 実装メモ（最初のスプリント）
 
-1. Prisma schemaを上記DDLに対応させる（開発はSQLite、本番はPostgres想定）
+1. Prisma schemaを上記DDLに対応させる（Render/SupabaseのPostgresを単一運用）
 2. `/health` と `/jobs/enqueue-sync` を先に作る
 3. workerなしでも `enqueue-sync -> 即時実行` の暫定実装でE2Eを通す
 4. SKU衝突とmissing確定ロジックを先に固定し、価格同期は後追い
