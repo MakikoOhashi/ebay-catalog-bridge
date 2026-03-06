@@ -70,18 +70,6 @@ function normalizeScopes(scope?: string) {
     .join(",");
 }
 
-async function resolveAccountLabel(storeId: number, requestedLabel?: string) {
-  const base = requestedLabel?.trim() || "primary";
-  const exists = await db.ebayAccount.findFirst({
-    where: { storeId, label: base },
-    select: { id: true },
-  });
-  if (!exists) return base;
-
-  const count = await db.ebayAccount.count({ where: { storeId } });
-  return `${base}-${count + 1}`;
-}
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const callbackUrl = new URL(request.url);
   const code = callbackUrl.searchParams.get("code");
@@ -165,11 +153,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  const label = await resolveAccountLabel(store.id, parsedState.label);
-  const created = await db.ebayAccount.create({
-    data: {
+  const label = parsedState.label?.trim() || "primary";
+  const upserted = await db.ebayAccount.upsert({
+    where: {
+      storeId_label: {
+        storeId: store.id,
+        label,
+      },
+    },
+    create: {
       storeId: store.id,
       label,
+      refreshTokenEnc: tokenJson.refresh_token,
+      scopes: normalizeScopes(tokenJson.scope),
+      status: "connected",
+    },
+    update: {
       refreshTokenEnc: tokenJson.refresh_token,
       scopes: normalizeScopes(tokenJson.scope),
       status: "connected",
@@ -177,6 +176,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   throw redirect(
-    `/oauth/ebay/done?status=connected&shop=${encodeURIComponent(parsedState.shop)}&account_id=${created.id}`,
+    `/oauth/ebay/done?status=connected&shop=${encodeURIComponent(parsedState.shop)}&account_id=${upserted.id}`,
   );
 };
