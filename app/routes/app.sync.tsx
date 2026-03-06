@@ -19,6 +19,7 @@ export default function SyncConsolePage() {
   const enqueueFetcher = useFetcher();
   const settingsFetcher = useFetcher();
   const conflictsFetcher = useFetcher();
+  const errorsFetcher = useFetcher();
   const resolveConflictFetcher = useFetcher();
   const retryFetcher = useFetcher();
 
@@ -37,6 +38,10 @@ export default function SyncConsolePage() {
   const conflictsJson = useMemo(
     () => pretty(conflictsFetcher.data, "No conflicts loaded yet."),
     [conflictsFetcher.data],
+  );
+  const errorsJson = useMemo(
+    () => pretty(errorsFetcher.data, "No sync errors loaded yet."),
+    [errorsFetcher.data],
   );
   const resolveJson = useMemo(
     () => pretty(resolveConflictFetcher.data, "No conflict resolution action yet."),
@@ -74,6 +79,12 @@ export default function SyncConsolePage() {
             {...(conflictsFetcher.state !== "idle" ? { loading: true } : {})}
           >
             Load Conflicts
+          </s-button>
+          <s-button
+            onClick={() => errorsFetcher.load("/api/sync/errors?limit=50")}
+            {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}
+          >
+            Load Errors
           </s-button>
         </s-stack>
       </s-section>
@@ -189,6 +200,12 @@ export default function SyncConsolePage() {
       <s-section heading="Conflicts JSON">
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{conflictsJson}</pre>
+        </s-box>
+      </s-section>
+
+      <s-section heading="Sync Errors JSON">
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{errorsJson}</pre>
         </s-box>
       </s-section>
 
