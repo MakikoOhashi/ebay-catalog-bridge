@@ -2,12 +2,17 @@ import type { CheckpointMode, RunStatus } from "@prisma/client";
 import type { ActionFunctionArgs } from "react-router";
 import db from "../db.server";
 import { authenticate } from "../shopify.server";
+import { unauthenticated } from "../shopify.server";
 
 type SyncInputItem = {
   sku?: string;
   itemId?: string;
   variationKey?: string;
   lastModified?: string;
+  title?: string;
+  description?: string;
+  quantity?: number;
+  imageUrls?: string[];
 };
 
 type EnqueueBody = {
@@ -60,6 +65,12 @@ type RunCounters = {
   conflictCount: number;
   missingCount: number;
   errorCount: number;
+};
+
+type ShopifyUpsertResult = {
+  productId: string | null;
+  variantId: string | null;
+  error: string | null;
 };
 
 function unauthorizedResponse() {
@@ -160,6 +171,172 @@ async function fetchWithRetry(
   }
 
   return lastResponse as Response;
+}
+
+async function graphqlJson(
+  admin: { graphql: (query: string, options?: { variables?: Record<string, unknown> }) => Promise<Response> },
+  query: string,
+  variables?: Record<string, unknown>,
+) {
+  const response = await admin.graphql(query, { variables });
+  return (await response.json()) as Record<string, unknown>;
+}
+
+function graphqlUserErrors(result: Record<string, unknown>, key: string): string[] {
+  const node = (result.data as Record<string, unknown> | undefined)?.[key] as
+    | Record<string, unknown>
+    | undefined;
+  const errors = (node?.userErrors as Array<Record<string, unknown>> | undefined) || [];
+  return errors
+    .map((e) => e.message)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+}
+
+function escapeSkuForSearch(sku: string) {
+  return sku.replace(/([:\\\\\"])/g, "\\$1");
+}
+
+async function upsertShopifyProductBySku(input: {
+  admin: { graphql: (query: string, options?: { variables?: Record<string, unknown> }) => Promise<Response> };
+  sku: string;
+  title?: string;
+  description?: string;
+}): Promise<ShopifyUpsertResult> {
+  const searchQuery = `sku:${escapeSkuForSearch(input.sku)}`;
+  const findJson = await graphqlJson(
+    input.admin,
+    `#graphql
+      query variantBySku($query: String!) {
+        productVariants(first: 1, query: $query) {
+          edges {
+            node {
+              id
+              sku
+              product {
+                id
+                title
+              }
+            }
+          }
+        }
+      }`,
+    { query: searchQuery },
+  );
+
+  const existingEdge = (
+    (((findJson.data as Record<string, unknown> | undefined)?.productVariants as Record<
+      string,
+      unknown
+    > | undefined)?.edges as Array<Record<string, unknown>> | undefined) || []
+  )[0];
+  const existingNode = existingEdge?.node as Record<string, unknown> | undefined;
+
+  if (existingNode?.id && (existingNode.product as Record<string, unknown> | undefined)?.id) {
+    return {
+      productId: (existingNode.product as Record<string, unknown>).id as string,
+      variantId: existingNode.id as string,
+      error: null,
+    };
+  }
+
+  const title = input.title?.trim() || `eBay ${input.sku}`;
+  const descriptionHtml = input.description?.trim() || "";
+
+  const createJson = await graphqlJson(
+    input.admin,
+    `#graphql
+      mutation createProduct($product: ProductCreateInput!) {
+        productCreate(product: $product) {
+          product {
+            id
+            variants(first: 1) {
+              edges {
+                node {
+                  id
+                }
+              }
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }`,
+    {
+      product: {
+        title,
+        ...(descriptionHtml ? { descriptionHtml } : {}),
+        status: "ACTIVE",
+      },
+    },
+  );
+
+  const createErrors = graphqlUserErrors(createJson, "productCreate");
+  if (createErrors.length > 0) {
+    return {
+      productId: null,
+      variantId: null,
+      error: `productCreate failed: ${createErrors.join("; ")}`,
+    };
+  }
+
+  const createdProduct = (createJson.data as Record<string, unknown> | undefined)
+    ?.productCreate as Record<string, unknown> | undefined;
+  const product = createdProduct?.product as Record<string, unknown> | undefined;
+  const productId = (product?.id as string | undefined) || null;
+  const createdVariantEdge = (
+    ((product?.variants as Record<string, unknown> | undefined)?.edges as Array<
+      Record<string, unknown>
+    > | undefined) || []
+  )[0];
+  const variantId = (createdVariantEdge?.node as Record<string, unknown> | undefined)?.id as
+    | string
+    | undefined;
+
+  if (!productId || !variantId) {
+    return {
+      productId,
+      variantId: variantId || null,
+      error: "productCreate succeeded but variant id was not returned.",
+    };
+  }
+
+  const updateJson = await graphqlJson(
+    input.admin,
+    `#graphql
+      mutation setVariantSku($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+        productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+          productVariants {
+            id
+            sku
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }`,
+    {
+      productId,
+      variants: [{ id: variantId, sku: input.sku }],
+    },
+  );
+
+  const updateErrors = graphqlUserErrors(updateJson, "productVariantsBulkUpdate");
+  if (updateErrors.length > 0) {
+    return {
+      productId,
+      variantId,
+      error: `productVariantsBulkUpdate failed: ${updateErrors.join("; ")}`,
+    };
+  }
+
+  return {
+    productId,
+    variantId,
+    error: null,
+  };
 }
 
 function parseNextOffset(next?: string | null): number | null {
@@ -421,6 +598,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         itemId: undefined,
         variationKey: undefined,
         lastModified: undefined,
+        title: it.product?.title,
+        description: it.product?.description,
+        quantity: it.availability?.shipToLocationAvailability?.quantity,
+        imageUrls: it.product?.imageUrls || [],
       }));
       nextOffset = parseNextOffset(page.next || null);
       counters.totalItems = inputItems.length;
@@ -513,6 +694,53 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       continue;
     }
 
+    let shopifyProductId: string | null = null;
+    let shopifyVariantId: string | null = null;
+
+    try {
+      const { admin } = await unauthenticated.admin(store.shop);
+      const upsertResult = await upsertShopifyProductBySku({
+        admin,
+        sku,
+        title: item.title,
+        description: item.description,
+      });
+
+      if (upsertResult.error) {
+        counters.errorCount += 1;
+        await db.syncError.create({
+          data: {
+            runId: run.id,
+            storeId: store.id,
+            ebayAccountId: ebayAccount.id,
+            sku,
+            ebayItemId,
+            errorCode: "SHOPIFY_UPSERT_ERROR",
+            errorMessage: upsertResult.error,
+          },
+        });
+        continue;
+      }
+
+      shopifyProductId = upsertResult.productId;
+      shopifyVariantId = upsertResult.variantId;
+    } catch (error) {
+      counters.errorCount += 1;
+      await db.syncError.create({
+        data: {
+          runId: run.id,
+          storeId: store.id,
+          ebayAccountId: ebayAccount.id,
+          sku,
+          ebayItemId,
+          errorCode: "SHOPIFY_ADMIN_UNAVAILABLE",
+          errorMessage:
+            error instanceof Error ? error.message : "Failed to initialize Shopify admin context.",
+        },
+      });
+      continue;
+    }
+
     await db.skuLink.upsert({
       where: { storeId_sku: { storeId: store.id, sku } },
       create: {
@@ -522,6 +750,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ebayItemId,
         ebayVariationKey: item.variationKey?.trim() || null,
         ebayLastModified: incomingModified,
+        shopifyProductId,
+        shopifyVariantId,
         syncStatus: "ok",
         lastSyncAt: new Date(),
         lastSeenInRunId: run.id,
@@ -532,6 +762,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         ebayItemId,
         ebayVariationKey: item.variationKey?.trim() || null,
         ebayLastModified: incomingModified,
+        shopifyProductId,
+        shopifyVariantId,
         syncStatus: "ok",
         lastSyncAt: new Date(),
         lastSeenInRunId: run.id,
