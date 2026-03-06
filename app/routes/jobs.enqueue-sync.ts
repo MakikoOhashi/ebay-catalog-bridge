@@ -179,7 +179,15 @@ async function graphqlJson(
   variables?: Record<string, unknown>,
 ) {
   const response = await admin.graphql(query, { variables });
-  return (await response.json()) as Record<string, unknown>;
+  const json = (await response.json()) as Record<string, unknown>;
+  const topErrors = (json.errors as Array<Record<string, unknown>> | undefined) || [];
+  if (topErrors.length > 0) {
+    const message = topErrors
+      .map((e) => (typeof e.message === "string" ? e.message : "GraphQL error"))
+      .join("; ");
+    throw new Error(message);
+  }
+  return json;
 }
 
 function graphqlUserErrors(result: Record<string, unknown>, key: string): string[] {
@@ -319,7 +327,7 @@ async function upsertShopifyProductBySku(input: {
       }`,
     {
       productId,
-      variants: [{ id: variantId, sku: input.sku }],
+      variants: [{ id: variantId, inventoryItem: { sku: input.sku } }],
     },
   );
 
@@ -739,9 +747,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           ebayAccountId: ebayAccount.id,
           sku,
           ebayItemId,
-          errorCode: "SHOPIFY_ADMIN_UNAVAILABLE",
+          errorCode: "SHOPIFY_UPSERT_ERROR",
           errorMessage:
-            error instanceof Error ? error.message : "Failed to initialize Shopify admin context.",
+            error instanceof Error ? error.message : "Failed to upsert Shopify product.",
         },
       });
       continue;
