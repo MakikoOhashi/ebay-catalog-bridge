@@ -675,11 +675,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       continue;
     }
 
-    const shouldSkip =
+    const shouldSkipByTimestamp =
       Boolean(existing) &&
       Boolean(existing?.ebayLastModified) &&
       Boolean(incomingModified) &&
       incomingModified!.getTime() <= existing!.ebayLastModified!.getTime();
+
+    // Skip only when we already have Shopify mapping for this SKU.
+    // If mapping is missing, force Shopify upsert even when eBay data itself is unchanged.
+    const hasShopifyMapping =
+      Boolean(existing?.shopifyProductId) && Boolean(existing?.shopifyVariantId);
+    const shouldSkip = shouldSkipByTimestamp && hasShopifyMapping;
 
     if (shouldSkip && existing) {
       counters.skippedCount += 1;
