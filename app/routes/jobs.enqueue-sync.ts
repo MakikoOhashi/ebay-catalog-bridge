@@ -209,13 +209,53 @@ async function upsertShopifyProductBySku(input: {
   sku: string;
   title?: string;
   description?: string;
+  knownVariantId?: string | null;
+  knownProductId?: string | null;
 }): Promise<ShopifyUpsertResult> {
+  if (input.knownVariantId && input.knownProductId) {
+    const updateJson = await graphqlJson(
+      input.admin,
+      `#graphql
+        mutation setVariantSku($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants {
+              id
+              sku
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        productId: input.knownProductId,
+        variants: [{ id: input.knownVariantId, inventoryItem: { sku: input.sku } }],
+      },
+    );
+
+    const updateErrors = graphqlUserErrors(updateJson, "productVariantsBulkUpdate");
+    if (updateErrors.length > 0) {
+      return {
+        productId: input.knownProductId,
+        variantId: input.knownVariantId,
+        error: `productVariantsBulkUpdate failed: ${updateErrors.join("; ")}`,
+      };
+    }
+
+    return {
+      productId: input.knownProductId,
+      variantId: input.knownVariantId,
+      error: null,
+    };
+  }
+
   const searchQuery = `sku:${escapeSkuForSearch(input.sku)}`;
   const findJson = await graphqlJson(
     input.admin,
     `#graphql
       query variantBySku($query: String!) {
-        productVariants(first: 1, query: $query) {
+        productVariants(first: 5, query: $query) {
           edges {
             node {
               id
@@ -231,13 +271,24 @@ async function upsertShopifyProductBySku(input: {
     { query: searchQuery },
   );
 
-  const existingEdge = (
+  const existingEdges = (
     (((findJson.data as Record<string, unknown> | undefined)?.productVariants as Record<
       string,
       unknown
     > | undefined)?.edges as Array<Record<string, unknown>> | undefined) || []
-  )[0];
-  const existingNode = existingEdge?.node as Record<string, unknown> | undefined;
+  )
+    .map((edge) => edge.node as Record<string, unknown>)
+    .filter(Boolean);
+
+  if (existingEdges.length > 1) {
+    return {
+      productId: null,
+      variantId: null,
+      error: `Multiple Shopify variants matched SKU ${input.sku}.`,
+    };
+  }
+
+  const existingNode = existingEdges[0];
 
   if (existingNode?.id && (existingNode.product as Record<string, unknown> | undefined)?.id) {
     return {
@@ -718,6 +769,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         sku,
         title: item.title,
         description: item.description,
+        knownVariantId: existing?.shopifyVariantId ?? null,
+        knownProductId: existing?.shopifyProductId ?? null,
       });
 
       if (upsertResult.error) {
