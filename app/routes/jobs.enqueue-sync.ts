@@ -679,7 +679,10 @@ async function parseRequestBody(request: Request): Promise<EnqueueBody> {
       limit: Number(form.get("limit") || 50),
       cursor: form.get("cursor")?.toString() || null,
       nextCursor: form.get("nextCursor")?.toString() || null,
-      fullScanComplete: form.get("fullScanComplete")?.toString() === "true",
+      fullScanComplete: form
+        .getAll("fullScanComplete")
+        .map((v) => v.toString())
+        .includes("true"),
       items: parsedItems,
     };
   }
