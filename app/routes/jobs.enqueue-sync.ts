@@ -73,6 +73,18 @@ type ShopifyUpsertResult = {
   error: string | null;
 };
 
+type ShopifyAdminClient = {
+  graphql: (
+    query: string,
+    options?: { variables?: Record<string, unknown> },
+  ) => Promise<Response>;
+};
+
+type ShopifyInventoryRef = {
+  inventoryItemId: string | null;
+  tracked: boolean | null;
+};
+
 function unauthorizedResponse() {
   return Response.json({ error: "unauthorized" }, { status: 401 });
 }
@@ -174,7 +186,7 @@ async function fetchWithRetry(
 }
 
 async function graphqlJson(
-  admin: { graphql: (query: string, options?: { variables?: Record<string, unknown> }) => Promise<Response> },
+  admin: ShopifyAdminClient,
   query: string,
   variables?: Record<string, unknown>,
 ) {
@@ -205,7 +217,7 @@ function escapeSkuForSearch(sku: string) {
 }
 
 async function upsertShopifyProductBySku(input: {
-  admin: { graphql: (query: string, options?: { variables?: Record<string, unknown> }) => Promise<Response> };
+  admin: ShopifyAdminClient;
   sku: string;
   title?: string;
   description?: string;
@@ -396,6 +408,133 @@ async function upsertShopifyProductBySku(input: {
     variantId,
     error: null,
   };
+}
+
+async function getPrimaryLocationId(admin: ShopifyAdminClient): Promise<string | null> {
+  const json = await graphqlJson(
+    admin,
+    `#graphql
+      query firstLocation {
+        locations(first: 1) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }`,
+  );
+
+  const first = (
+    (((json.data as Record<string, unknown> | undefined)?.locations as Record<
+      string,
+      unknown
+    > | undefined)?.edges as Array<Record<string, unknown>> | undefined) || []
+  )[0];
+  return ((first?.node as Record<string, unknown> | undefined)?.id as string | undefined) || null;
+}
+
+async function getVariantInventoryRef(
+  admin: ShopifyAdminClient,
+  variantId: string,
+): Promise<ShopifyInventoryRef> {
+  const json = await graphqlJson(
+    admin,
+    `#graphql
+      query variantInventory($id: ID!) {
+        productVariant(id: $id) {
+          id
+          inventoryItem {
+            id
+            tracked
+          }
+        }
+      }`,
+    { id: variantId },
+  );
+
+  const variant = (json.data as Record<string, unknown> | undefined)
+    ?.productVariant as Record<string, unknown> | undefined;
+  const inventoryItem = variant?.inventoryItem as Record<string, unknown> | undefined;
+  return {
+    inventoryItemId: (inventoryItem?.id as string | undefined) || null,
+    tracked:
+      typeof inventoryItem?.tracked === "boolean"
+        ? (inventoryItem.tracked as boolean)
+        : null,
+  };
+}
+
+async function ensureInventoryTracking(
+  admin: ShopifyAdminClient,
+  inventoryItemId: string,
+): Promise<string | null> {
+  const json = await graphqlJson(
+    admin,
+    `#graphql
+      mutation trackInventoryItem($id: ID!, $input: InventoryItemInput!) {
+        inventoryItemUpdate(id: $id, input: $input) {
+          inventoryItem {
+            id
+            tracked
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }`,
+    {
+      id: inventoryItemId,
+      input: { tracked: true },
+    },
+  );
+
+  const userErrors = graphqlUserErrors(json, "inventoryItemUpdate");
+  return userErrors.length > 0 ? userErrors.join("; ") : null;
+}
+
+async function setShopifyAvailableQuantity(input: {
+  admin: ShopifyAdminClient;
+  inventoryItemId: string;
+  locationId: string;
+  quantity: number;
+}): Promise<string | null> {
+  const json = await graphqlJson(
+    input.admin,
+    `#graphql
+      mutation setInventory($input: InventorySetQuantitiesInput!) {
+        inventorySetQuantities(input: $input) {
+          userErrors {
+            field
+            message
+          }
+        }
+      }`,
+    {
+      input: {
+        name: "available",
+        reason: "correction",
+        ignoreCompareQuantity: true,
+        quantities: [
+          {
+            inventoryItemId: input.inventoryItemId,
+            locationId: input.locationId,
+            quantity: input.quantity,
+          },
+        ],
+      },
+    },
+  );
+
+  const node = (json.data as Record<string, unknown> | undefined)
+    ?.inventorySetQuantities as Record<string, unknown> | undefined;
+  const userErrors = (node?.userErrors as Array<Record<string, unknown>> | undefined) || [];
+  const messages = userErrors
+    .map((e) => e.message)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+  return messages.length > 0 ? messages.join("; ") : null;
 }
 
 function parseNextOffset(next?: string | null): number | null {
@@ -628,6 +767,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   let inputItems: SyncInputItem[] = Array.isArray(body.items) ? body.items : [];
   let source: "manual" | "ebay_api" = "manual";
   let nextOffset: number | null = null;
+  let shopifyAdmin: ShopifyAdminClient | null = null;
+  let locationId: string | null = null;
 
   try {
     if (inputItems.length === 0) {
@@ -679,6 +820,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   counters.totalItems = Math.max(counters.totalItems, inputItems.length);
+
+  try {
+    const unauth = await unauthenticated.admin(store.shop);
+    shopifyAdmin = unauth.admin as ShopifyAdminClient;
+    locationId = await getPrimaryLocationId(shopifyAdmin);
+  } catch (error) {
+    counters.errorCount += 1;
+    await db.syncError.create({
+      data: {
+        runId: run.id,
+        storeId: store.id,
+        ebayAccountId: ebayAccount.id,
+        errorCode: "SHOPIFY_ADMIN_UNAVAILABLE",
+        errorMessage:
+          error instanceof Error ? error.message : "Failed to initialize Shopify admin context.",
+      },
+    });
+  }
 
   for (const item of inputItems) {
     const sku = item.sku?.trim();
@@ -763,9 +922,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     let shopifyVariantId: string | null = null;
 
     try {
-      const { admin } = await unauthenticated.admin(store.shop);
+      if (!shopifyAdmin) {
+        throw new Error("Shopify admin context not initialized.");
+      }
       const upsertResult = await upsertShopifyProductBySku({
-        admin,
+        admin: shopifyAdmin,
         sku,
         title: item.title,
         description: item.description,
@@ -791,6 +952,70 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       shopifyProductId = upsertResult.productId;
       shopifyVariantId = upsertResult.variantId;
+
+      if (locationId && shopifyVariantId && Number.isFinite(item.quantity)) {
+        const quantity = Math.max(0, Number(item.quantity));
+        const inventoryRef = await getVariantInventoryRef(shopifyAdmin, shopifyVariantId);
+        if (!inventoryRef.inventoryItemId) {
+          counters.errorCount += 1;
+          await db.syncError.create({
+            data: {
+              runId: run.id,
+              storeId: store.id,
+              ebayAccountId: ebayAccount.id,
+              sku,
+              ebayItemId,
+              errorCode: "SHOPIFY_INVENTORY_ERROR",
+              errorMessage: "No inventory item found for Shopify variant.",
+            },
+          });
+          continue;
+        }
+
+        if (inventoryRef.tracked === false) {
+          const trackError = await ensureInventoryTracking(
+            shopifyAdmin,
+            inventoryRef.inventoryItemId,
+          );
+          if (trackError) {
+            counters.errorCount += 1;
+            await db.syncError.create({
+              data: {
+                runId: run.id,
+                storeId: store.id,
+                ebayAccountId: ebayAccount.id,
+                sku,
+                ebayItemId,
+                errorCode: "SHOPIFY_INVENTORY_ERROR",
+                errorMessage: `Failed to enable inventory tracking: ${trackError}`,
+              },
+            });
+            continue;
+          }
+        }
+
+        const setQtyError = await setShopifyAvailableQuantity({
+          admin: shopifyAdmin,
+          inventoryItemId: inventoryRef.inventoryItemId,
+          locationId,
+          quantity,
+        });
+        if (setQtyError) {
+          counters.errorCount += 1;
+          await db.syncError.create({
+            data: {
+              runId: run.id,
+              storeId: store.id,
+              ebayAccountId: ebayAccount.id,
+              sku,
+              ebayItemId,
+              errorCode: "SHOPIFY_INVENTORY_ERROR",
+              errorMessage: `Failed to set inventory quantity: ${setQtyError}`,
+            },
+          });
+          continue;
+        }
+      }
     } catch (error) {
       counters.errorCount += 1;
       await db.syncError.create({
