@@ -22,6 +22,7 @@ export default function SyncConsolePage() {
   const errorsFetcher = useFetcher();
   const resolveConflictFetcher = useFetcher();
   const retryFetcher = useFetcher();
+  const notifyTestFetcher = useFetcher();
 
   const statusJson = useMemo(
     () => pretty(statusFetcher.data, "No status loaded yet."),
@@ -50,6 +51,10 @@ export default function SyncConsolePage() {
   const retryJson = useMemo(
     () => pretty(retryFetcher.data, "No retry requested yet."),
     [retryFetcher.data],
+  );
+  const notifyJson = useMemo(
+    () => pretty(notifyTestFetcher.data, "No notification test requested yet."),
+    [notifyTestFetcher.data],
   );
 
   return (
@@ -125,6 +130,14 @@ export default function SyncConsolePage() {
             Retry Latest Run
           </s-button>
         </retryFetcher.Form>
+        <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
+          <s-button
+            type="submit"
+            {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}
+          >
+            Send Test Alert
+          </s-button>
+        </notifyTestFetcher.Form>
       </s-section>
 
       <s-section heading="Settings">
@@ -217,7 +230,7 @@ export default function SyncConsolePage() {
       <s-section heading="Actions JSON">
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-            {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nresolve:\n${resolveJson}`}
+            {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
           </pre>
         </s-box>
       </s-section>

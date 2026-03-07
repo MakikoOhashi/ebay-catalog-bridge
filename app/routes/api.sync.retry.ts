@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { action as enqueueSyncAction } from "./jobs.enqueue-sync";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method.toUpperCase() !== "POST") {
@@ -27,17 +28,46 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
   }
 
-  const run = await db.syncRun.create({
-    data: {
-      storeId: store.id,
-      ebayAccountId: latest.ebayAccountId,
+  const sharedSecret = process.env.CRON_SHARED_SECRET?.trim();
+  const headers = new Headers({ "content-type": "application/json" });
+  if (sharedSecret) {
+    headers.set("x-cron-secret", sharedSecret);
+  }
+
+  const internalRequest = new Request(new URL("/jobs/enqueue-sync", request.url), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      shop: session.shop,
       mode: latest.mode || "rolling",
-      status: "succeeded",
-      startedAt: new Date(),
-      endedAt: new Date(),
-      message: "Manual retry requested (placeholder).",
-    },
+      ebayAccountId: latest.ebayAccountId,
+    }),
   });
 
-  return Response.json({ enqueued: true, runId: run.id });
+  const response = await enqueueSyncAction({
+    request: internalRequest,
+    context: {},
+    params: {},
+  } as ActionFunctionArgs);
+
+  let result: unknown = null;
+  try {
+    result = await response.clone().json();
+  } catch {
+    result = { error: "non_json_response" };
+  }
+
+  return Response.json(
+    {
+      enqueued: response.ok,
+      status: response.status,
+      retryTarget: {
+        shop: session.shop,
+        ebayAccountId: latest.ebayAccountId,
+        mode: latest.mode || "rolling",
+      },
+      result,
+    },
+    { status: response.ok ? 200 : 400 },
+  );
 };
