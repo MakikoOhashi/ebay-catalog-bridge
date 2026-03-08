@@ -133,11 +133,34 @@ async function notifyRunIssue(input: {
   const webhook = process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
   if (!webhook) return;
 
+  const text = [
+    `:warning: ebay-catalog-bridge sync issue`,
+    `shop=${input.shop}`,
+    `runId=${input.runId}`,
+    `status=${input.status}`,
+    `errors=${input.counters.errorCount}`,
+    `processed=${input.counters.processedItems}/${input.counters.totalItems}`,
+    `conflicts=${input.counters.conflictCount}`,
+    `missing=${input.counters.missingCount}`,
+  ].join(" | ");
+
   try {
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        text,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Sync issue detected*\n• shop: \`${input.shop}\`\n• runId: \`${input.runId}\`\n• status: \`${input.status}\`\n• errors: \`${input.counters.errorCount}\`\n• processed: \`${input.counters.processedItems}/${input.counters.totalItems}\`\n• conflicts: \`${input.counters.conflictCount}\`\n• missing: \`${input.counters.missingCount}\``,
+            },
+          },
+        ],
+        metadata: payload,
+      }),
     });
   } catch (error) {
     console.error("[sync-notify] webhook failed", error);

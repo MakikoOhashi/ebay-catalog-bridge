@@ -27,11 +27,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     createdAt: new Date().toISOString(),
   };
 
+  const text = [
+    ":white_check_mark: ebay-catalog-bridge notify test",
+    `shop=${session.shop}`,
+    `at=${payload.createdAt}`,
+  ].join(" | ");
+
   try {
     const response = await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        text,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Notification test sent*\n• shop: \`${session.shop}\`\n• at: \`${payload.createdAt}\``,
+            },
+          },
+        ],
+        metadata: payload,
+      }),
     });
 
     return Response.json({
