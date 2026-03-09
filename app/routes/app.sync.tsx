@@ -13,9 +13,59 @@ function pretty(data: unknown, empty = "No data yet.") {
   return JSON.stringify(data, null, 2);
 }
 
+type SyncStatusPayload = {
+  latestRun?: {
+    id: number;
+    status: string;
+    mode: string;
+    startedAt: string;
+    endedAt: string | null;
+    totalItems: number;
+    processedItems: number;
+    createdCount: number;
+    updatedCount: number;
+    skippedCount: number;
+    conflictCount: number;
+    missingCount: number;
+    errorCount: number;
+    message: string | null;
+  } | null;
+};
+
+type SyncRunsPayload = {
+  runs?: Array<{
+    id: number;
+    status: string;
+    mode: string;
+    startedAt: string;
+    processedItems: number;
+    totalItems: number;
+    createdCount: number;
+    updatedCount: number;
+    errorCount: number;
+    missingCount: number;
+    conflictCount: number;
+  }>;
+};
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function statusTone(status?: string | null) {
+  if (!status) return "neutral";
+  if (status === "succeeded") return "success";
+  if (status === "partial") return "warning";
+  if (status === "failed") return "critical";
+  return "neutral";
+}
+
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
-  const statusFetcher = useFetcher();
+  const statusFetcher = useFetcher<SyncStatusPayload>();
   const enqueueFetcher = useFetcher();
   const settingsFetcher = useFetcher();
   const conflictsFetcher = useFetcher();
@@ -23,6 +73,7 @@ export default function SyncConsolePage() {
   const resolveConflictFetcher = useFetcher();
   const retryFetcher = useFetcher();
   const notifyTestFetcher = useFetcher();
+  const runsFetcher = useFetcher<SyncRunsPayload>();
 
   const statusJson = useMemo(
     () => pretty(statusFetcher.data, "No status loaded yet."),
@@ -56,6 +107,13 @@ export default function SyncConsolePage() {
     () => pretty(notifyTestFetcher.data, "No notification test requested yet."),
     [notifyTestFetcher.data],
   );
+  const runsJson = useMemo(
+    () => pretty(runsFetcher.data, "No run history loaded yet."),
+    [runsFetcher.data],
+  );
+
+  const latestRun = statusFetcher.data?.latestRun || null;
+  const runs = runsFetcher.data?.runs || [];
 
   return (
     <s-page heading="Sync Console">
@@ -74,6 +132,12 @@ export default function SyncConsolePage() {
             Refresh Sync Status
           </s-button>
           <s-button
+            onClick={() => runsFetcher.load("/api/sync/runs?limit=20")}
+            {...(runsFetcher.state !== "idle" ? { loading: true } : {})}
+          >
+            Load Run History
+          </s-button>
+          <s-button
             onClick={() => settingsFetcher.load("/api/settings")}
             {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}
           >
@@ -85,13 +149,24 @@ export default function SyncConsolePage() {
           >
             Load Conflicts
           </s-button>
-          <s-button
-            onClick={() => errorsFetcher.load("/api/sync/errors?limit=50")}
-            {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Load Errors
-          </s-button>
         </s-stack>
+      </s-section>
+
+      <s-section heading="Latest Run Summary">
+        <s-stack direction="inline" gap="base">
+          <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || "unknown"}</s-badge>
+          <span>Run ID: {latestRun?.id ?? "-"}</span>
+          <span>Started: {formatDate(latestRun?.startedAt)}</span>
+          <span>Processed: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
+        </s-stack>
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Created: {latestRun?.createdCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Updated: {latestRun?.updatedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Skipped: {latestRun?.skippedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Conflicts: {latestRun?.conflictCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Missing: {latestRun?.missingCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">Errors: {latestRun?.errorCount ?? 0}</s-box>
+        </div>
       </s-section>
 
       <s-section heading="Run Sync">
@@ -201,6 +276,72 @@ export default function SyncConsolePage() {
             </s-button>
           </s-stack>
         </resolveConflictFetcher.Form>
+      </s-section>
+
+      <s-section heading="Sync Errors">
+        <errorsFetcher.Form method="get" action="/api/sync/errors">
+          <s-stack direction="inline" gap="base">
+            <label style={{ display: "grid", gap: 4 }}>
+              <span>Limit</span>
+              <input type="number" name="limit" defaultValue={50} min={1} max={200} />
+            </label>
+            <label style={{ display: "grid", gap: 4 }}>
+              <span>Run ID (optional)</span>
+              <input type="number" name="runId" placeholder="latest" />
+            </label>
+            <label style={{ display: "grid", gap: 4 }}>
+              <span>Error Code (optional)</span>
+              <input type="text" name="errorCode" placeholder="EBAY_FETCH_ERROR" />
+            </label>
+            <s-button
+              type="submit"
+              {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}
+            >
+              Load Errors
+            </s-button>
+          </s-stack>
+        </errorsFetcher.Form>
+      </s-section>
+
+      <s-section heading="Run History">
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          {runs.length === 0 ? (
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th align="left">Run</th>
+                    <th align="left">Status</th>
+                    <th align="left">Mode</th>
+                    <th align="left">Started</th>
+                    <th align="left">Processed</th>
+                    <th align="left">Created</th>
+                    <th align="left">Updated</th>
+                    <th align="left">Errors</th>
+                    <th align="left">Missing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runs.map((run) => (
+                    <tr key={run.id}>
+                      <td>{run.id}</td>
+                      <td>{run.status}</td>
+                      <td>{run.mode}</td>
+                      <td>{formatDate(run.startedAt)}</td>
+                      <td>{`${run.processedItems}/${run.totalItems}`}</td>
+                      <td>{run.createdCount}</td>
+                      <td>{run.updatedCount}</td>
+                      <td>{run.errorCount}</td>
+                      <td>{run.missingCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </s-box>
       </s-section>
 
       <s-section heading="Sync Status JSON">

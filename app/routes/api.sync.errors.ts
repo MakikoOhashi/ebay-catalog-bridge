@@ -8,6 +8,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const limitRaw = Number(url.searchParams.get("limit") || 50);
   const limit = Math.max(1, Math.min(200, Number.isFinite(limitRaw) ? limitRaw : 50));
+  const runIdParam = url.searchParams.get("runId");
+  const runId = runIdParam ? Number(runIdParam) : null;
+  const errorCode = url.searchParams.get("errorCode")?.trim() || null;
 
   const store = await db.store.findUnique({
     where: { shop },
@@ -28,8 +31,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return Response.json({ shop, errors: [], latestRunId: null });
   }
 
+  const targetRunId = runId && Number.isFinite(runId) ? runId : latestRun.id;
+
   const errors = await db.syncError.findMany({
-    where: { storeId: store.id, runId: latestRun.id },
+    where: {
+      storeId: store.id,
+      runId: targetRunId,
+      ...(errorCode ? { errorCode } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: limit,
     select: {
@@ -48,6 +57,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return Response.json({
     shop,
     latestRunId: latestRun.id,
+    targetRunId,
+    errorCodeFilter: errorCode,
     count: errors.length,
     errors,
   });
