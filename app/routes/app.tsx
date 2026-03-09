@@ -17,11 +17,11 @@ export default function App() {
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-      <div style={{ display: "flex", gap: 12, padding: "8px 12px" }}>
+      <ui-nav-menu>
         <s-link href="/app">Home</s-link>
         <s-link href="/app/additional">Additional page</s-link>
         <s-link href="/app/sync">Sync Console</s-link>
-      </div>
+      </ui-nav-menu>
       <Outlet />
     </AppProvider>
   );
