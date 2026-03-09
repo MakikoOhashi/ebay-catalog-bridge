@@ -20,6 +20,13 @@ const textMap = {
     pageHeading: "同期コンソール",
     quickActions: "クイック操作",
     connectEbay: "eBayアカウント接続",
+    accountConnections: "eBayアカウント接続（最大4）",
+    slot: "スロット",
+    connect: "接続",
+    connected: "接続済み",
+    notConnected: "未接続",
+    syncAccount: "同期対象アカウント",
+    autoFirstConnected: "自動（最初の接続済み）",
     refreshStatus: "同期ステータス更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
@@ -83,6 +90,13 @@ const textMap = {
     pageHeading: "Sync Console",
     quickActions: "Quick Actions",
     connectEbay: "Connect eBay Account",
+    accountConnections: "eBay Account Connections (max 4)",
+    slot: "Slot",
+    connect: "Connect",
+    connected: "Connected",
+    notConnected: "Not connected",
+    syncAccount: "Sync Account",
+    autoFirstConnected: "Auto (first connected)",
     refreshStatus: "Refresh Sync Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
@@ -164,6 +178,7 @@ type SyncStatusPayload = {
     id: number;
     status: string;
     mode: string;
+    ebayAccountId?: number | null;
     startedAt: string;
     endedAt: string | null;
     totalItems: number;
@@ -176,6 +191,11 @@ type SyncStatusPayload = {
     errorCount: number;
     message: string | null;
   } | null;
+  checkpoints?: Array<{
+    ebayAccountId: number;
+    label: string;
+    status: string;
+  }>;
 };
 
 type SyncRunsPayload = {
@@ -224,6 +244,12 @@ export default function SyncConsolePage() {
   const notifyTestFetcher = useFetcher();
   const runsFetcher = useFetcher<SyncRunsPayload>();
 
+  useEffect(() => {
+    statusFetcher.load("/api/sync/status");
+    runsFetcher.load("/api/sync/runs?limit=20");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const enqueueJson = useMemo(() => pretty(enqueueFetcher.data, t.noEnqueueRequested), [enqueueFetcher.data, t.noEnqueueRequested]);
   const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
@@ -236,6 +262,10 @@ export default function SyncConsolePage() {
 
   const latestRun = statusFetcher.data?.latestRun || null;
   const runs = runsFetcher.data?.runs || [];
+  const checkpoints = statusFetcher.data?.checkpoints || [];
+  const accountSlots = ["primary", "account-2", "account-3", "account-4"];
+
+  const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
 
   return (
     <s-page heading={t.pageHeading}>
@@ -243,7 +273,6 @@ export default function SyncConsolePage() {
         <s-stack direction="inline" gap="base">
           <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
           <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
-          <s-button href={`/api/ebay/oauth/start?label=primary&shop=${encodeURIComponent(shop)}`} target="_blank">{t.connectEbay}</s-button>
           <s-button onClick={() => statusFetcher.load("/api/sync/status")} {...(statusFetcher.state !== "idle" ? { loading: true } : {})}>{t.refreshStatus}</s-button>
           <s-button onClick={() => runsFetcher.load("/api/sync/runs?limit=20")} {...(runsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadRunHistory}</s-button>
           <s-button onClick={() => settingsFetcher.load("/api/settings")} {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadSettings}</s-button>
@@ -251,10 +280,38 @@ export default function SyncConsolePage() {
         </s-stack>
       </s-section>
 
+      <s-section heading={t.accountConnections}>
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
+          {accountSlots.map((slotLabel, index) => {
+            const checkpoint = checkpointByLabel.get(slotLabel);
+            const isConnected = checkpoint?.status === "connected";
+            return (
+              <s-box key={slotLabel} borderWidth="base" borderRadius="base" padding="base">
+                <s-stack direction="block" gap="base">
+                  <span>{t.slot} {index + 1}: {slotLabel}</span>
+                  <s-badge tone={isConnected ? "success" : "neutral"}>
+                    {isConnected
+                      ? `${t.connected} (#${checkpoint?.ebayAccountId})`
+                      : t.notConnected}
+                  </s-badge>
+                  <s-button
+                    href={`/api/ebay/oauth/start?label=${encodeURIComponent(slotLabel)}&shop=${encodeURIComponent(shop)}${checkpoint?.ebayAccountId ? `&accountId=${checkpoint.ebayAccountId}` : ""}`}
+                    target="_blank"
+                  >
+                    {t.connect}
+                  </s-button>
+                </s-stack>
+              </s-box>
+            );
+          })}
+        </div>
+      </s-section>
+
       <s-section heading={t.latestSummary}>
         <s-stack direction="inline" gap="base">
           <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
           <span>{t.runId}: {latestRun?.id ?? "-"}</span>
+          <span>{t.syncAccount}: {latestRun?.ebayAccountId ?? "-"}</span>
           <span>{t.started}: {formatDate(latestRun?.startedAt)}</span>
           <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
         </s-stack>
@@ -273,6 +330,17 @@ export default function SyncConsolePage() {
           <input type="hidden" name="shop" value={shop} />
           <input type="hidden" name="mode" value="rolling" />
           <input type="hidden" name="fullScanComplete" value="false" />
+          <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+            <span>{t.syncAccount}</span>
+            <select name="ebayAccountId" defaultValue="">
+              <option value="">{t.autoFirstConnected}</option>
+              {checkpoints.map((checkpoint) => (
+                <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
+                  #{checkpoint.ebayAccountId} ({checkpoint.label}) - {checkpoint.status}
+                </option>
+              ))}
+            </select>
+          </label>
           <label style={{ display: "grid", gap: 6 }}>
             <span>{t.itemsJson}</span>
             <textarea
