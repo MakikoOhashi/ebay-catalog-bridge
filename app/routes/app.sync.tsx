@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
@@ -11,6 +11,152 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 function pretty(data: unknown, empty = "No data yet.") {
   if (!data) return empty;
   return JSON.stringify(data, null, 2);
+}
+
+type Lang = "ja" | "en";
+
+const textMap = {
+  ja: {
+    pageHeading: "同期コンソール",
+    quickActions: "クイック操作",
+    connectEbay: "eBayアカウント接続",
+    refreshStatus: "同期ステータス更新",
+    loadRunHistory: "実行履歴を読み込む",
+    loadSettings: "設定を読み込む",
+    loadConflicts: "競合を読み込む",
+    latestSummary: "最新実行サマリー",
+    runId: "実行ID",
+    started: "開始",
+    processed: "処理",
+    created: "作成",
+    updated: "更新",
+    skipped: "スキップ",
+    conflicts: "競合",
+    missing: "欠損",
+    errors: "エラー",
+    runSync: "同期実行",
+    itemsJson: "Items JSON（任意）",
+    forceFullScan: "フルスキャン完了として扱う（missing_on_ebay適用）",
+    enqueueSync: "同期ジョブ投入",
+    retryLatest: "最新Runを再試行",
+    sendTestAlert: "テスト通知送信",
+    settings: "設定",
+    syncFrequency: "同期頻度（分）",
+    syncFields: "同期フィールド（カンマ区切り）",
+    fixedFxRate: "固定為替レート",
+    roundRule: "丸めルール",
+    errorNotifyEmail: "通知メール",
+    enablePriceSync: "価格同期を有効化",
+    saveSettings: "設定保存",
+    resolveConflict: "競合解消",
+    conflictId: "競合ID",
+    note: "メモ",
+    resolve: "解消する",
+    syncErrors: "同期エラー",
+    limit: "件数",
+    runIdOptional: "Run ID（任意）",
+    errorCodeOptional: "エラーコード（任意）",
+    loadErrors: "エラーを読み込む",
+    runHistory: "実行履歴",
+    run: "Run",
+    status: "状態",
+    mode: "モード",
+    syncStatusJson: "同期ステータスJSON",
+    settingsJson: "設定JSON",
+    conflictsJson: "競合JSON",
+    syncErrorsJson: "同期エラーJSON",
+    actionsJson: "操作JSON",
+    noStatusLoaded: "ステータス未読み込み",
+    noEnqueueRequested: "enqueue未実行",
+    noSettingsLoaded: "設定未読み込み",
+    noConflictsLoaded: "競合未読み込み",
+    noErrorsLoaded: "エラー未読み込み",
+    noResolveAction: "競合解消未実行",
+    noRetryRequested: "再試行未実行",
+    noNotifyRequested: "通知テスト未実行",
+    noRunHistoryLoaded: "履歴未読み込み",
+    unknown: "不明",
+    japanese: "日本語",
+    english: "English",
+  },
+  en: {
+    pageHeading: "Sync Console",
+    quickActions: "Quick Actions",
+    connectEbay: "Connect eBay Account",
+    refreshStatus: "Refresh Sync Status",
+    loadRunHistory: "Load Run History",
+    loadSettings: "Load Settings",
+    loadConflicts: "Load Conflicts",
+    latestSummary: "Latest Run Summary",
+    runId: "Run ID",
+    started: "Started",
+    processed: "Processed",
+    created: "Created",
+    updated: "Updated",
+    skipped: "Skipped",
+    conflicts: "Conflicts",
+    missing: "Missing",
+    errors: "Errors",
+    runSync: "Run Sync",
+    itemsJson: "Items JSON (optional)",
+    forceFullScan: "Force full scan complete (apply missing_on_ebay)",
+    enqueueSync: "Enqueue Core Sync",
+    retryLatest: "Retry Latest Run",
+    sendTestAlert: "Send Test Alert",
+    settings: "Settings",
+    syncFrequency: "Sync Frequency (minutes)",
+    syncFields: "Sync Fields (comma separated)",
+    fixedFxRate: "Fixed FX Rate",
+    roundRule: "Round Rule",
+    errorNotifyEmail: "Error Notify Email",
+    enablePriceSync: "Enable Price Sync",
+    saveSettings: "Save Settings",
+    resolveConflict: "Resolve Conflict",
+    conflictId: "Conflict ID",
+    note: "Note",
+    resolve: "Resolve Conflict",
+    syncErrors: "Sync Errors",
+    limit: "Limit",
+    runIdOptional: "Run ID (optional)",
+    errorCodeOptional: "Error Code (optional)",
+    loadErrors: "Load Errors",
+    runHistory: "Run History",
+    run: "Run",
+    status: "Status",
+    mode: "Mode",
+    syncStatusJson: "Sync Status JSON",
+    settingsJson: "Settings JSON",
+    conflictsJson: "Conflicts JSON",
+    syncErrorsJson: "Sync Errors JSON",
+    actionsJson: "Actions JSON",
+    noStatusLoaded: "No status loaded yet.",
+    noEnqueueRequested: "No enqueue request sent yet.",
+    noSettingsLoaded: "No settings loaded yet.",
+    noConflictsLoaded: "No conflicts loaded yet.",
+    noErrorsLoaded: "No sync errors loaded yet.",
+    noResolveAction: "No conflict resolution action yet.",
+    noRetryRequested: "No retry requested yet.",
+    noNotifyRequested: "No notification test requested yet.",
+    noRunHistoryLoaded: "No run history loaded yet.",
+    unknown: "unknown",
+    japanese: "日本語",
+    english: "English",
+  },
+} as const;
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function statusTone(status?: string | null) {
+  if (!status) return "neutral";
+  if (status === "succeeded") return "success";
+  if (status === "partial") return "warning";
+  if (status === "failed") return "critical";
+  return "neutral";
 }
 
 type SyncStatusPayload = {
@@ -48,23 +194,26 @@ type SyncRunsPayload = {
   }>;
 };
 
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
-
-function statusTone(status?: string | null) {
-  if (!status) return "neutral";
-  if (status === "succeeded") return "success";
-  if (status === "partial") return "warning";
-  if (status === "failed") return "critical";
-  return "neutral";
-}
-
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
+  const [lang, setLang] = useState<Lang>("ja");
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem("syncConsoleLang") : null;
+    if (saved === "ja" || saved === "en") {
+      setLang(saved);
+    }
+  }, []);
+
+  const t = textMap[lang];
+
+  const switchLang = (next: Lang) => {
+    setLang(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("syncConsoleLang", next);
+    }
+  };
+
   const statusFetcher = useFetcher<SyncStatusPayload>();
   const enqueueFetcher = useFetcher();
   const settingsFetcher = useFetcher();
@@ -75,235 +224,148 @@ export default function SyncConsolePage() {
   const notifyTestFetcher = useFetcher();
   const runsFetcher = useFetcher<SyncRunsPayload>();
 
-  const statusJson = useMemo(
-    () => pretty(statusFetcher.data, "No status loaded yet."),
-    [statusFetcher.data],
-  );
-  const enqueueJson = useMemo(
-    () => pretty(enqueueFetcher.data, "No enqueue request sent yet."),
-    [enqueueFetcher.data],
-  );
-  const settingsJson = useMemo(
-    () => pretty(settingsFetcher.data, "No settings loaded yet."),
-    [settingsFetcher.data],
-  );
-  const conflictsJson = useMemo(
-    () => pretty(conflictsFetcher.data, "No conflicts loaded yet."),
-    [conflictsFetcher.data],
-  );
-  const errorsJson = useMemo(
-    () => pretty(errorsFetcher.data, "No sync errors loaded yet."),
-    [errorsFetcher.data],
-  );
-  const resolveJson = useMemo(
-    () => pretty(resolveConflictFetcher.data, "No conflict resolution action yet."),
-    [resolveConflictFetcher.data],
-  );
-  const retryJson = useMemo(
-    () => pretty(retryFetcher.data, "No retry requested yet."),
-    [retryFetcher.data],
-  );
-  const notifyJson = useMemo(
-    () => pretty(notifyTestFetcher.data, "No notification test requested yet."),
-    [notifyTestFetcher.data],
-  );
-  const runsJson = useMemo(
-    () => pretty(runsFetcher.data, "No run history loaded yet."),
-    [runsFetcher.data],
-  );
+  const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
+  const enqueueJson = useMemo(() => pretty(enqueueFetcher.data, t.noEnqueueRequested), [enqueueFetcher.data, t.noEnqueueRequested]);
+  const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
+  const conflictsJson = useMemo(() => pretty(conflictsFetcher.data, t.noConflictsLoaded), [conflictsFetcher.data, t.noConflictsLoaded]);
+  const errorsJson = useMemo(() => pretty(errorsFetcher.data, t.noErrorsLoaded), [errorsFetcher.data, t.noErrorsLoaded]);
+  const resolveJson = useMemo(() => pretty(resolveConflictFetcher.data, t.noResolveAction), [resolveConflictFetcher.data, t.noResolveAction]);
+  const retryJson = useMemo(() => pretty(retryFetcher.data, t.noRetryRequested), [retryFetcher.data, t.noRetryRequested]);
+  const notifyJson = useMemo(() => pretty(notifyTestFetcher.data, t.noNotifyRequested), [notifyTestFetcher.data, t.noNotifyRequested]);
+  const runsJson = useMemo(() => pretty(runsFetcher.data, t.noRunHistoryLoaded), [runsFetcher.data, t.noRunHistoryLoaded]);
 
   const latestRun = statusFetcher.data?.latestRun || null;
   const runs = runsFetcher.data?.runs || [];
 
   return (
-    <s-page heading="Sync Console">
-      <s-section heading="Quick Actions">
+    <s-page heading={t.pageHeading}>
+      <s-section heading={t.quickActions}>
         <s-stack direction="inline" gap="base">
-          <s-button
-            href={`/api/ebay/oauth/start?label=primary&shop=${encodeURIComponent(shop)}`}
-            target="_blank"
-          >
-            Connect eBay Account
-          </s-button>
-          <s-button
-            onClick={() => statusFetcher.load("/api/sync/status")}
-            {...(statusFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Refresh Sync Status
-          </s-button>
-          <s-button
-            onClick={() => runsFetcher.load("/api/sync/runs?limit=20")}
-            {...(runsFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Load Run History
-          </s-button>
-          <s-button
-            onClick={() => settingsFetcher.load("/api/settings")}
-            {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Load Settings
-          </s-button>
-          <s-button
-            onClick={() => conflictsFetcher.load("/api/conflicts")}
-            {...(conflictsFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Load Conflicts
-          </s-button>
+          <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
+          <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
+          <s-button href={`/api/ebay/oauth/start?label=primary&shop=${encodeURIComponent(shop)}`} target="_blank">{t.connectEbay}</s-button>
+          <s-button onClick={() => statusFetcher.load("/api/sync/status")} {...(statusFetcher.state !== "idle" ? { loading: true } : {})}>{t.refreshStatus}</s-button>
+          <s-button onClick={() => runsFetcher.load("/api/sync/runs?limit=20")} {...(runsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadRunHistory}</s-button>
+          <s-button onClick={() => settingsFetcher.load("/api/settings")} {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadSettings}</s-button>
+          <s-button onClick={() => conflictsFetcher.load("/api/conflicts")} {...(conflictsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadConflicts}</s-button>
         </s-stack>
       </s-section>
 
-      <s-section heading="Latest Run Summary">
+      <s-section heading={t.latestSummary}>
         <s-stack direction="inline" gap="base">
-          <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || "unknown"}</s-badge>
-          <span>Run ID: {latestRun?.id ?? "-"}</span>
-          <span>Started: {formatDate(latestRun?.startedAt)}</span>
-          <span>Processed: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
+          <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
+          <span>{t.runId}: {latestRun?.id ?? "-"}</span>
+          <span>{t.started}: {formatDate(latestRun?.startedAt)}</span>
+          <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
         </s-stack>
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Created: {latestRun?.createdCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Updated: {latestRun?.updatedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Skipped: {latestRun?.skippedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Conflicts: {latestRun?.conflictCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Missing: {latestRun?.missingCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">Errors: {latestRun?.errorCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.created}: {latestRun?.createdCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.updated}: {latestRun?.updatedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.skipped}: {latestRun?.skippedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.conflicts}: {latestRun?.conflictCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.missing}: {latestRun?.missingCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.errors}: {latestRun?.errorCount ?? 0}</s-box>
         </div>
       </s-section>
 
-      <s-section heading="Run Sync">
+      <s-section heading={t.runSync}>
         <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
           <input type="hidden" name="shop" value={shop} />
           <input type="hidden" name="mode" value="rolling" />
           <input type="hidden" name="fullScanComplete" value="false" />
           <label style={{ display: "grid", gap: 6 }}>
-            <span>Items JSON (optional)</span>
+            <span>{t.itemsJson}</span>
             <textarea
               name="itemsJson"
               rows={8}
-              defaultValue={`[
-  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"},
-  {"sku":"SKU-002","itemId":"ITEM-002","lastModified":"2026-03-05T00:05:00Z"}
-]`}
+              defaultValue={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"},\n  {"sku":"SKU-002","itemId":"ITEM-002","lastModified":"2026-03-05T00:05:00Z"}\n]`}
               style={{ minWidth: 420 }}
             />
           </label>
           <label style={{ display: "inline-flex", gap: 8 }}>
             <input type="checkbox" name="fullScanComplete" value="true" />
-            <span>Force full scan complete (apply missing_on_ebay)</span>
+            <span>{t.forceFullScan}</span>
           </label>
-          <s-button
-            type="submit"
-            {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Enqueue Core Sync
-          </s-button>
+          <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
         </enqueueFetcher.Form>
         <retryFetcher.Form method="post" action="/api/sync/retry">
-          <s-button
-            type="submit"
-            {...(retryFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Retry Latest Run
-          </s-button>
+          <s-button type="submit" {...(retryFetcher.state !== "idle" ? { loading: true } : {})}>{t.retryLatest}</s-button>
         </retryFetcher.Form>
         <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
-          <s-button
-            type="submit"
-            {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}
-          >
-            Send Test Alert
-          </s-button>
+          <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>{t.sendTestAlert}</s-button>
         </notifyTestFetcher.Form>
       </s-section>
 
-      <s-section heading="Settings">
+      <s-section heading={t.settings}>
         <settingsFetcher.Form method="post" action="/api/settings">
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>Sync Frequency (minutes)</span>
+              <span>{t.syncFrequency}</span>
               <input type="number" min={5} name="syncFrequencyMinutes" defaultValue={30} />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>Sync Fields (comma separated)</span>
-              <input
-                type="text"
-                name="syncFields"
-                defaultValue="title,description,images,weight,stock,price"
-              />
+              <span>{t.syncFields}</span>
+              <input type="text" name="syncFields" defaultValue="title,description,images,weight,stock,price" />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>Fixed FX Rate</span>
+              <span>{t.fixedFxRate}</span>
               <input type="number" name="fixedFxRate" step="0.01" defaultValue={150} />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>Round Rule</span>
+              <span>{t.roundRule}</span>
               <input type="text" name="roundRule" defaultValue="nearest" />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>Error Notify Email</span>
+              <span>{t.errorNotifyEmail}</span>
               <input type="email" name="errorNotifyEmail" placeholder="ops@example.com" />
             </label>
             <label style={{ display: "inline-flex", gap: 8 }}>
               <input type="hidden" name="priceSyncEnabled" value="false" />
               <input type="checkbox" name="priceSyncEnabled" value="true" />
-              <span>Enable Price Sync</span>
+              <span>{t.enablePriceSync}</span>
             </label>
-            <s-button
-              type="submit"
-              {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}
-            >
-              Save Settings
-            </s-button>
+            <s-button type="submit" {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
           </s-stack>
         </settingsFetcher.Form>
       </s-section>
 
-      <s-section heading="Resolve Conflict">
+      <s-section heading={t.resolveConflict}>
         <resolveConflictFetcher.Form method="post" action="/api/conflicts">
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
-              <span>Conflict ID</span>
+              <span>{t.conflictId}</span>
               <input type="number" name="conflictId" />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-              <span>Note</span>
+              <span>{t.note}</span>
               <input type="text" name="note" placeholder="resolved manually" />
             </label>
-            <s-button
-              type="submit"
-              {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}
-            >
-              Resolve Conflict
-            </s-button>
+            <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
           </s-stack>
         </resolveConflictFetcher.Form>
       </s-section>
 
-      <s-section heading="Sync Errors">
+      <s-section heading={t.syncErrors}>
         <errorsFetcher.Form method="get" action="/api/sync/errors">
           <s-stack direction="inline" gap="base">
             <label style={{ display: "grid", gap: 4 }}>
-              <span>Limit</span>
+              <span>{t.limit}</span>
               <input type="number" name="limit" defaultValue={50} min={1} max={200} />
             </label>
             <label style={{ display: "grid", gap: 4 }}>
-              <span>Run ID (optional)</span>
+              <span>{t.runIdOptional}</span>
               <input type="number" name="runId" placeholder="latest" />
             </label>
             <label style={{ display: "grid", gap: 4 }}>
-              <span>Error Code (optional)</span>
+              <span>{t.errorCodeOptional}</span>
               <input type="text" name="errorCode" placeholder="EBAY_FETCH_ERROR" />
             </label>
-            <s-button
-              type="submit"
-              {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}
-            >
-              Load Errors
-            </s-button>
+            <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadErrors}</s-button>
           </s-stack>
         </errorsFetcher.Form>
       </s-section>
 
-      <s-section heading="Run History">
+      <s-section heading={t.runHistory}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           {runs.length === 0 ? (
             <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
@@ -312,15 +374,15 @@ export default function SyncConsolePage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    <th align="left">Run</th>
-                    <th align="left">Status</th>
-                    <th align="left">Mode</th>
-                    <th align="left">Started</th>
-                    <th align="left">Processed</th>
-                    <th align="left">Created</th>
-                    <th align="left">Updated</th>
-                    <th align="left">Errors</th>
-                    <th align="left">Missing</th>
+                    <th align="left">{t.run}</th>
+                    <th align="left">{t.status}</th>
+                    <th align="left">{t.mode}</th>
+                    <th align="left">{t.started}</th>
+                    <th align="left">{t.processed}</th>
+                    <th align="left">{t.created}</th>
+                    <th align="left">{t.updated}</th>
+                    <th align="left">{t.errors}</th>
+                    <th align="left">{t.missing}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,31 +406,31 @@ export default function SyncConsolePage() {
         </s-box>
       </s-section>
 
-      <s-section heading="Sync Status JSON">
+      <s-section heading={t.syncStatusJson}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{statusJson}</pre>
         </s-box>
       </s-section>
 
-      <s-section heading="Settings JSON">
+      <s-section heading={t.settingsJson}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{settingsJson}</pre>
         </s-box>
       </s-section>
 
-      <s-section heading="Conflicts JSON">
+      <s-section heading={t.conflictsJson}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{conflictsJson}</pre>
         </s-box>
       </s-section>
 
-      <s-section heading="Sync Errors JSON">
+      <s-section heading={t.syncErrorsJson}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{errorsJson}</pre>
         </s-box>
       </s-section>
 
-      <s-section heading="Actions JSON">
+      <s-section heading={t.actionsJson}>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
             {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
