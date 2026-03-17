@@ -97,6 +97,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", scopes);
   authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("prompt", "login");
 
   throw redirect(authUrl.toString());
 };
