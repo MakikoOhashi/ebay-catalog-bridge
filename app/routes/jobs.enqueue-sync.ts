@@ -60,6 +60,8 @@ type EbayTradingItem = {
 type EbayTradingPage = {
   items: EbayTradingItem[];
   hasMore: boolean;
+  ack: string | null;
+  errors: string[];
 };
 
 type EbayTokenResponse = {
@@ -607,6 +609,13 @@ function extractTagBlocks(block: string, tag: string) {
 }
 
 function parseTradingItems(xml: string): EbayTradingPage {
+  const ack = extractTagValue(xml, "Ack");
+  const errors = extractTagBlocks(xml, "Errors").map((errorBlock) => {
+    const shortMessage = extractTagValue(errorBlock, "ShortMessage");
+    const longMessage = extractTagValue(errorBlock, "LongMessage");
+    const errorCode = extractTagValue(errorBlock, "ErrorCode");
+    return [errorCode, shortMessage, longMessage].filter(Boolean).join(": ");
+  });
   const activeListBlock = extractTagValue(xml, "ActiveList");
   const itemArrayBlock = activeListBlock ? extractTagValue(activeListBlock, "ItemArray") : null;
   const itemBlocks = itemArrayBlock ? extractTagBlocks(itemArrayBlock, "Item") : [];
@@ -659,7 +668,7 @@ function parseTradingItems(xml: string): EbayTradingPage {
   }
 
   const hasMore = (extractTagValue(xml, "HasMoreItems") || "").toLowerCase() === "true";
-  return { items, hasMore };
+  return { items, hasMore, ack, errors };
 }
 
 async function getAccessToken(refreshToken: string, scopes: string) {
@@ -970,6 +979,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           limit,
           offset,
         });
+
+        if (
+          tradingPage.ack &&
+          tradingPage.ack !== "Success" &&
+          tradingPage.ack !== "Warning"
+        ) {
+          throw new Error(
+            `eBay trading fetch returned Ack=${tradingPage.ack}: ${tradingPage.errors.join(" | ") || "No error details."}`,
+          );
+        }
+
         inputItems = tradingPage.items.map((it) => ({
           sku: it.sku,
           itemId: it.itemId,
@@ -980,6 +1000,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           imageUrls: it.imageUrls || [],
         }));
         nextOffset = tradingPage.hasMore ? offset + limit : null;
+
+        if (inputItems.length === 0) {
+          await db.syncError.create({
+            data: {
+              runId: run.id,
+              storeId: store.id,
+              ebayAccountId: ebayAccount.id,
+              errorCode: "EBAY_EMPTY_RESULT",
+              errorMessage: `eBay returned zero items. Inventory API empty; Trading API Ack=${tradingPage.ack || "unknown"}; errors=${tradingPage.errors.join(" | ") || "none"}.`,
+            },
+          });
+        }
       }
 
       counters.totalItems = inputItems.length;
