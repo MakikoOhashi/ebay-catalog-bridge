@@ -275,6 +275,9 @@ async function upsertShopifyProductBySku(input: {
   knownVariantId?: string | null;
   knownProductId?: string | null;
 }): Promise<ShopifyUpsertResult> {
+  const title = input.title?.trim() || `eBay ${input.sku}`;
+  const descriptionHtml = input.description?.trim() || "";
+
   if (input.knownVariantId && input.knownProductId) {
     const normalizedPrice = normalizePrice(input.price);
     const updateJson = await graphqlJson(
@@ -310,6 +313,39 @@ async function upsertShopifyProductBySku(input: {
         productId: input.knownProductId,
         variantId: input.knownVariantId,
         error: `productVariantsBulkUpdate failed: ${updateErrors.join("; ")}`,
+      };
+    }
+
+    const productUpdateJson = await graphqlJson(
+      input.admin,
+      `#graphql
+        mutation updateProduct($product: ProductUpdateInput!) {
+          productUpdate(product: $product) {
+            product {
+              id
+              title
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        product: {
+          id: input.knownProductId,
+          title,
+          descriptionHtml,
+        },
+      },
+    );
+
+    const productUpdateErrors = graphqlUserErrors(productUpdateJson, "productUpdate");
+    if (productUpdateErrors.length > 0) {
+      return {
+        productId: input.knownProductId,
+        variantId: input.knownVariantId,
+        error: `productUpdate failed: ${productUpdateErrors.join("; ")}`,
       };
     }
 
@@ -361,15 +397,87 @@ async function upsertShopifyProductBySku(input: {
   const existingNode = existingEdges[0];
 
   if (existingNode?.id && (existingNode.product as Record<string, unknown> | undefined)?.id) {
+    const existingProductId = (existingNode.product as Record<string, unknown>).id as string;
+    const normalizedPrice = normalizePrice(input.price);
+
+    const variantUpdateJson = await graphqlJson(
+      input.admin,
+      `#graphql
+        mutation setVariantSku($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants {
+              id
+              sku
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        productId: existingProductId,
+        variants: [
+          {
+            id: existingNode.id as string,
+            inventoryItem: { sku: input.sku },
+            ...(normalizedPrice ? { price: normalizedPrice } : {}),
+          },
+        ],
+      },
+    );
+
+    const variantUpdateErrors = graphqlUserErrors(
+      variantUpdateJson,
+      "productVariantsBulkUpdate",
+    );
+    if (variantUpdateErrors.length > 0) {
+      return {
+        productId: existingProductId,
+        variantId: existingNode.id as string,
+        error: `productVariantsBulkUpdate failed: ${variantUpdateErrors.join("; ")}`,
+      };
+    }
+
+    const productUpdateJson = await graphqlJson(
+      input.admin,
+      `#graphql
+        mutation updateProduct($product: ProductUpdateInput!) {
+          productUpdate(product: $product) {
+            product {
+              id
+              title
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        product: {
+          id: existingProductId,
+          title,
+          descriptionHtml,
+        },
+      },
+    );
+
+    const productUpdateErrors = graphqlUserErrors(productUpdateJson, "productUpdate");
+    if (productUpdateErrors.length > 0) {
+      return {
+        productId: existingProductId,
+        variantId: existingNode.id as string,
+        error: `productUpdate failed: ${productUpdateErrors.join("; ")}`,
+      };
+    }
+
     return {
-      productId: (existingNode.product as Record<string, unknown>).id as string,
+      productId: existingProductId,
       variantId: existingNode.id as string,
       error: null,
     };
   }
-
-  const title = input.title?.trim() || `eBay ${input.sku}`;
-  const descriptionHtml = input.description?.trim() || "";
 
   const createJson = await graphqlJson(
     input.admin,
@@ -733,11 +841,6 @@ function parseTradingItems(xml: string): EbayTradingPage {
     const currentPriceRaw =
       extractTagValue(priceBlock, "CurrentPrice") || extractTagValue(itemBlock, "StartPrice");
     const price = currentPriceRaw ? Number(currentPriceRaw) : undefined;
-    const lastModified =
-      extractTagValue(itemBlock, "ListingDetails") &&
-      extractTagValue(extractTagValue(itemBlock, "ListingDetails") || "", "StartTime")
-        ? extractTagValue(extractTagValue(itemBlock, "ListingDetails") || "", "StartTime") || undefined
-        : undefined;
     const pictureDetails = extractTagValue(itemBlock, "PictureDetails") || "";
     const pictureUrls = extractTagBlocks(pictureDetails, "PictureURL").map((value) => decodeXml(value.trim()));
 
@@ -754,7 +857,6 @@ function parseTradingItems(xml: string): EbayTradingPage {
           title,
           quantity: variationQuantity,
           price,
-          lastModified,
           imageUrls: pictureUrls,
           variationKey: variationSku,
         });
@@ -771,7 +873,6 @@ function parseTradingItems(xml: string): EbayTradingPage {
       title,
       quantity,
       price,
-      lastModified,
       imageUrls: pictureUrls,
     });
   }
