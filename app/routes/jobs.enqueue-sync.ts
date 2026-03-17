@@ -12,6 +12,7 @@ type SyncInputItem = {
   title?: string;
   description?: string;
   quantity?: number;
+  price?: number;
   imageUrls?: string[];
 };
 
@@ -33,6 +34,9 @@ type EbayInventoryItem = {
     description?: string;
     imageUrls?: string[];
   };
+  price?: {
+    value?: string;
+  };
   availability?: {
     shipToLocationAvailability?: {
       quantity?: number;
@@ -52,6 +56,7 @@ type EbayTradingItem = {
   itemId?: string;
   title?: string;
   quantity?: number;
+  price?: number;
   lastModified?: string;
   imageUrls?: string[];
   variationKey?: string;
@@ -256,15 +261,22 @@ function escapeSkuForSearch(sku: string) {
   return sku.replace(/([:\\\\\"])/g, "\\$1");
 }
 
+function normalizePrice(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  return value.toFixed(2);
+}
+
 async function upsertShopifyProductBySku(input: {
   admin: ShopifyAdminClient;
   sku: string;
   title?: string;
   description?: string;
+  price?: number | null;
   knownVariantId?: string | null;
   knownProductId?: string | null;
 }): Promise<ShopifyUpsertResult> {
   if (input.knownVariantId && input.knownProductId) {
+    const normalizedPrice = normalizePrice(input.price);
     const updateJson = await graphqlJson(
       input.admin,
       `#graphql
@@ -282,7 +294,13 @@ async function upsertShopifyProductBySku(input: {
         }`,
       {
         productId: input.knownProductId,
-        variants: [{ id: input.knownVariantId, inventoryItem: { sku: input.sku } }],
+        variants: [
+          {
+            id: input.knownVariantId,
+            inventoryItem: { sku: input.sku },
+            ...(normalizedPrice ? { price: normalizedPrice } : {}),
+          },
+        ],
       },
     );
 
@@ -430,7 +448,13 @@ async function upsertShopifyProductBySku(input: {
       }`,
     {
       productId,
-      variants: [{ id: variantId, inventoryItem: { sku: input.sku } }],
+      variants: [
+        {
+          id: variantId,
+          inventoryItem: { sku: input.sku },
+          ...(normalizePrice(input.price) ? { price: normalizePrice(input.price) } : {}),
+        },
+      ],
     },
   );
 
@@ -504,6 +528,85 @@ async function getVariantInventoryRef(
         ? (inventoryItem.tracked as boolean)
         : null,
   };
+}
+
+async function getExistingProductImageUrls(
+  admin: ShopifyAdminClient,
+  productId: string,
+): Promise<string[]> {
+  const json = await graphqlJson(
+    admin,
+    `#graphql
+      query productImages($id: ID!) {
+        product(id: $id) {
+          media(first: 20) {
+            nodes {
+              ... on MediaImage {
+                image {
+                  url
+                }
+              }
+            }
+          }
+        }
+      }`,
+    { id: productId },
+  );
+
+  const nodes =
+    ((((json.data as Record<string, unknown> | undefined)?.product as Record<string, unknown> | undefined)
+      ?.media as Record<string, unknown> | undefined)?.nodes as Array<Record<string, unknown>> | undefined) || [];
+
+  return nodes
+    .map((node) => ((node.image as Record<string, unknown> | undefined)?.url as string | undefined) || null)
+    .filter((url): url is string => Boolean(url));
+}
+
+async function syncShopifyProductImages(input: {
+  admin: ShopifyAdminClient;
+  productId: string;
+  imageUrls?: string[];
+}): Promise<string | null> {
+  const incomingUrls = (input.imageUrls || []).filter(Boolean);
+  if (incomingUrls.length === 0) return null;
+
+  const existingUrls = await getExistingProductImageUrls(input.admin, input.productId);
+  const missingUrls = incomingUrls.filter((url) => !existingUrls.includes(url));
+  if (missingUrls.length === 0) return null;
+
+  const json = await graphqlJson(
+    input.admin,
+    `#graphql
+      mutation createMedia($productId: ID!, $media: [CreateMediaInput!]!) {
+        productCreateMedia(productId: $productId, media: $media) {
+          media {
+            alt
+            mediaContentType
+            status
+          }
+          mediaUserErrors {
+            field
+            message
+          }
+        }
+      }`,
+    {
+      productId: input.productId,
+      media: missingUrls.map((url, index) => ({
+        alt: `eBay image ${index + 1}`,
+        mediaContentType: "IMAGE",
+        originalSource: url,
+      })),
+    },
+  );
+
+  const node = (json.data as Record<string, unknown> | undefined)
+    ?.productCreateMedia as Record<string, unknown> | undefined;
+  const errors = (node?.mediaUserErrors as Array<Record<string, unknown>> | undefined) || [];
+  const messages = errors
+    .map((error) => error.message)
+    .filter((message): message is string => typeof message === "string" && message.length > 0);
+  return messages.length > 0 ? messages.join("; ") : null;
 }
 
 async function ensureInventoryTracking(
@@ -626,6 +729,10 @@ function parseTradingItems(xml: string): EbayTradingPage {
     const title = extractTagValue(itemBlock, "Title") || undefined;
     const quantityRaw = extractTagValue(itemBlock, "Quantity");
     const quantity = quantityRaw ? Number(quantityRaw) : undefined;
+    const priceBlock = extractTagValue(itemBlock, "SellingStatus") || itemBlock;
+    const currentPriceRaw =
+      extractTagValue(priceBlock, "CurrentPrice") || extractTagValue(itemBlock, "StartPrice");
+    const price = currentPriceRaw ? Number(currentPriceRaw) : undefined;
     const lastModified =
       extractTagValue(itemBlock, "ListingDetails") &&
       extractTagValue(extractTagValue(itemBlock, "ListingDetails") || "", "StartTime")
@@ -646,6 +753,7 @@ function parseTradingItems(xml: string): EbayTradingPage {
           itemId,
           title,
           quantity: variationQuantity,
+          price,
           lastModified,
           imageUrls: pictureUrls,
           variationKey: variationSku,
@@ -662,6 +770,7 @@ function parseTradingItems(xml: string): EbayTradingPage {
       itemId,
       title,
       quantity,
+      price,
       lastModified,
       imageUrls: pictureUrls,
     });
@@ -894,6 +1003,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const shop = body.shop ?? "unknown-shop.local";
   const mode = parseMode(body.mode);
   const store = await resolveStore(shop);
+  const syncFieldSet = new Set(
+    store.syncFields
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
   const ebayAccount = await resolveEbayAccount(store.id, body.ebayAccountId);
 
   if (!ebayAccount) {
@@ -970,6 +1085,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           title: it.product?.title,
           description: it.product?.description,
           quantity: it.availability?.shipToLocationAvailability?.quantity,
+          price: it.price?.value ? Number(it.price.value) : undefined,
           imageUrls: it.product?.imageUrls || [],
         }));
         nextOffset = parseNextOffset(inventoryPage.next || null);
@@ -997,6 +1113,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           lastModified: it.lastModified,
           title: it.title,
           quantity: it.quantity,
+          price: it.price,
           imageUrls: it.imageUrls || [],
         }));
         nextOffset = tradingPage.hasMore ? offset + limit : null;
@@ -1140,6 +1257,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         sku,
         title: item.title,
         description: item.description,
+        price: store.priceSyncEnabled && syncFieldSet.has("price") ? item.price ?? null : null,
         knownVariantId: existing?.shopifyVariantId ?? null,
         knownProductId: existing?.shopifyProductId ?? null,
       });
@@ -1162,6 +1280,30 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       shopifyProductId = upsertResult.productId;
       shopifyVariantId = upsertResult.variantId;
+
+      if (shopifyProductId && syncFieldSet.has("images")) {
+        const imageSyncError = await syncShopifyProductImages({
+          admin: shopifyAdmin,
+          productId: shopifyProductId,
+          imageUrls: item.imageUrls,
+        });
+
+        if (imageSyncError) {
+          counters.errorCount += 1;
+          await db.syncError.create({
+            data: {
+              runId: run.id,
+              storeId: store.id,
+              ebayAccountId: ebayAccount.id,
+              sku,
+              ebayItemId,
+              errorCode: "SHOPIFY_IMAGE_SYNC_ERROR",
+              errorMessage: imageSyncError,
+            },
+          });
+          continue;
+        }
+      }
 
       if (locationId && shopifyVariantId && Number.isFinite(item.quantity)) {
         const quantity = Math.max(0, Number(item.quantity));
