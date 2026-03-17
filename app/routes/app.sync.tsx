@@ -24,6 +24,7 @@ const textMap = {
     accountConnections: "eBayアカウント接続（最大4）",
     slot: "スロット",
     connect: "接続",
+    disconnect: "解除",
     connected: "接続済み",
     notConnected: "未接続",
     syncAccount: "同期対象アカウント",
@@ -106,6 +107,7 @@ const textMap = {
     accountConnections: "eBay Account Connections (max 4)",
     slot: "Slot",
     connect: "Connect",
+    disconnect: "Disconnect",
     connected: "Connected",
     notConnected: "Not connected",
     syncAccount: "Sync Account",
@@ -267,12 +269,20 @@ export default function SyncConsolePage() {
   const retryFetcher = useFetcher();
   const notifyTestFetcher = useFetcher();
   const runsFetcher = useFetcher<SyncRunsPayload>();
+  const disconnectFetcher = useFetcher();
 
   useEffect(() => {
     statusFetcher.load("/api/sync/status");
     runsFetcher.load("/api/sync/runs?limit=20");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (disconnectFetcher.data && disconnectFetcher.state === "idle") {
+      statusFetcher.load("/api/sync/status");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disconnectFetcher.data, disconnectFetcher.state]);
 
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const enqueueJson = useMemo(() => pretty(enqueueFetcher.data, t.noEnqueueRequested), [enqueueFetcher.data, t.noEnqueueRequested]);
@@ -325,6 +335,18 @@ export default function SyncConsolePage() {
                   >
                     {t.connect}
                   </s-button>
+                  {isConnected && checkpoint?.ebayAccountId ? (
+                    <disconnectFetcher.Form method="post" action="/api/ebay/account/disconnect">
+                      <input type="hidden" name="accountId" value={checkpoint.ebayAccountId} />
+                      <s-button
+                        type="submit"
+                        variant="secondary"
+                        {...(disconnectFetcher.state !== "idle" ? { loading: true } : {})}
+                      >
+                        {t.disconnect}
+                      </s-button>
+                    </disconnectFetcher.Form>
+                  ) : null}
                 </s-stack>
               </s-box>
             );
