@@ -47,6 +47,21 @@ type EbayInventoryPage = {
   limit?: number;
 };
 
+type EbayTradingItem = {
+  sku?: string;
+  itemId?: string;
+  title?: string;
+  quantity?: number;
+  lastModified?: string;
+  imageUrls?: string[];
+  variationKey?: string;
+};
+
+type EbayTradingPage = {
+  items: EbayTradingItem[];
+  hasMore: boolean;
+};
+
 type EbayTokenResponse = {
   access_token?: string;
   token_type?: string;
@@ -571,6 +586,82 @@ function parseNextOffset(next?: string | null): number | null {
   }
 }
 
+function decodeXml(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function extractTagValue(block: string, tag: string) {
+  const match = block.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
+  return match ? decodeXml(match[1].trim()) : null;
+}
+
+function extractTagBlocks(block: string, tag: string) {
+  return Array.from(block.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "gi"))).map(
+    (match) => match[1],
+  );
+}
+
+function parseTradingItems(xml: string): EbayTradingPage {
+  const activeListBlock = extractTagValue(xml, "ActiveList");
+  const itemArrayBlock = activeListBlock ? extractTagValue(activeListBlock, "ItemArray") : null;
+  const itemBlocks = itemArrayBlock ? extractTagBlocks(itemArrayBlock, "Item") : [];
+  const items: EbayTradingItem[] = [];
+
+  for (const itemBlock of itemBlocks) {
+    const itemId = extractTagValue(itemBlock, "ItemID") || undefined;
+    const title = extractTagValue(itemBlock, "Title") || undefined;
+    const quantityRaw = extractTagValue(itemBlock, "Quantity");
+    const quantity = quantityRaw ? Number(quantityRaw) : undefined;
+    const lastModified =
+      extractTagValue(itemBlock, "ListingDetails") &&
+      extractTagValue(extractTagValue(itemBlock, "ListingDetails") || "", "StartTime")
+        ? extractTagValue(extractTagValue(itemBlock, "ListingDetails") || "", "StartTime") || undefined
+        : undefined;
+    const pictureDetails = extractTagValue(itemBlock, "PictureDetails") || "";
+    const pictureUrls = extractTagBlocks(pictureDetails, "PictureURL").map((value) => decodeXml(value.trim()));
+
+    const variationBlocks = extractTagBlocks(itemBlock, "Variation");
+    if (variationBlocks.length > 0) {
+      for (const variationBlock of variationBlocks) {
+        const variationSku = extractTagValue(variationBlock, "SKU") || undefined;
+        const variationQuantityRaw = extractTagValue(variationBlock, "Quantity");
+        const variationQuantity = variationQuantityRaw ? Number(variationQuantityRaw) : quantity;
+        if (!variationSku) continue;
+        items.push({
+          sku: variationSku,
+          itemId,
+          title,
+          quantity: variationQuantity,
+          lastModified,
+          imageUrls: pictureUrls,
+          variationKey: variationSku,
+        });
+      }
+      continue;
+    }
+
+    const sku = extractTagValue(itemBlock, "SKU") || undefined;
+    if (!sku) continue;
+
+    items.push({
+      sku,
+      itemId,
+      title,
+      quantity,
+      lastModified,
+      imageUrls: pictureUrls,
+    });
+  }
+
+  const hasMore = (extractTagValue(xml, "HasMoreItems") || "").toLowerCase() === "true";
+  return { items, hasMore };
+}
+
 async function getAccessToken(refreshToken: string, scopes: string) {
   const clientId = process.env.EBAY_CLIENT_ID;
   const clientSecret = process.env.EBAY_CLIENT_SECRET;
@@ -645,6 +736,45 @@ async function fetchInventoryPage(input: {
   }
 
   return json as EbayInventoryPage;
+}
+
+async function fetchTradingActiveListings(input: {
+  accessToken: string;
+  limit: number;
+  offset: number;
+}) {
+  const pageNumber = Math.floor(input.offset / input.limit) + 1;
+  const response = await fetchWithRetry(
+    `${getEbayApiBaseUrl()}/ws/api.dll`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/xml",
+        "X-EBAY-API-CALL-NAME": "GetMyeBaySelling",
+        "X-EBAY-API-COMPATIBILITY-LEVEL": "1231",
+        "X-EBAY-API-SITEID": "0",
+        "X-EBAY-API-IAF-TOKEN": input.accessToken,
+      },
+      body: `<?xml version="1.0" encoding="utf-8"?>
+<GetMyeBaySellingRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+  <ActiveList>
+    <Include>true</Include>
+    <Pagination>
+      <EntriesPerPage>${input.limit}</EntriesPerPage>
+      <PageNumber>${pageNumber}</PageNumber>
+    </Pagination>
+  </ActiveList>
+</GetMyeBaySellingRequest>`,
+    },
+    3,
+  );
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`eBay trading fetch failed (${response.status}): ${text}`);
+  }
+
+  return parseTradingItems(text);
 }
 
 async function ensureAuthorized(request: Request) {
@@ -817,19 +947,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const initialOffset = body.cursor ?? checkpoint?.cursor;
       const offset = Number.isFinite(Number(initialOffset)) ? Number(initialOffset) : 0;
 
-      const page = await fetchInventoryPage({ accessToken, limit, offset });
-      const fetchedItems = Array.isArray(page.inventoryItems) ? page.inventoryItems : [];
-      inputItems = fetchedItems.map((it) => ({
-        sku: it.sku,
-        itemId: undefined,
-        variationKey: undefined,
-        lastModified: undefined,
-        title: it.product?.title,
-        description: it.product?.description,
-        quantity: it.availability?.shipToLocationAvailability?.quantity,
-        imageUrls: it.product?.imageUrls || [],
-      }));
-      nextOffset = parseNextOffset(page.next || null);
+      const inventoryPage = await fetchInventoryPage({ accessToken, limit, offset });
+      const fetchedItems = Array.isArray(inventoryPage.inventoryItems)
+        ? inventoryPage.inventoryItems
+        : [];
+
+      if (fetchedItems.length > 0) {
+        inputItems = fetchedItems.map((it) => ({
+          sku: it.sku,
+          itemId: undefined,
+          variationKey: undefined,
+          lastModified: undefined,
+          title: it.product?.title,
+          description: it.product?.description,
+          quantity: it.availability?.shipToLocationAvailability?.quantity,
+          imageUrls: it.product?.imageUrls || [],
+        }));
+        nextOffset = parseNextOffset(inventoryPage.next || null);
+      } else {
+        const tradingPage = await fetchTradingActiveListings({
+          accessToken,
+          limit,
+          offset,
+        });
+        inputItems = tradingPage.items.map((it) => ({
+          sku: it.sku,
+          itemId: it.itemId,
+          variationKey: it.variationKey,
+          lastModified: it.lastModified,
+          title: it.title,
+          quantity: it.quantity,
+          imageUrls: it.imageUrls || [],
+        }));
+        nextOffset = tradingPage.hasMore ? offset + limit : null;
+      }
+
       counters.totalItems = inputItems.length;
     }
   } catch (error) {
