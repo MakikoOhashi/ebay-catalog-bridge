@@ -78,7 +78,8 @@ const textMap = {
     roundNearest: "四捨五入",
     roundUp: "切り上げ",
     roundDown: "切り捨て",
-    errorNotifyEmail: "通知メール",
+    errorNotifyEmail: "通知メール（準備中）",
+    errorNotifyEmailHelp: "メール通知はまだ未実装です。現在はSlack通知のみ動作します。",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
     resolveConflict: "競合解消",
@@ -184,7 +185,8 @@ const textMap = {
     roundNearest: "Nearest",
     roundUp: "Round Up",
     roundDown: "Round Down",
-    errorNotifyEmail: "Error Notify Email",
+    errorNotifyEmail: "Error Notify Email (coming soon)",
+    errorNotifyEmailHelp: "Email notifications are not implemented yet. Only Slack notifications are active right now.",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
     resolveConflict: "Resolve Conflict",
@@ -691,7 +693,9 @@ export default function SyncConsolePage() {
                 name="errorNotifyEmail"
                 placeholder="ops@example.com"
                 defaultValue={currentSettings?.errorNotifyEmail ?? ""}
+                disabled
               />
+              <small>{t.errorNotifyEmailHelp}</small>
             </label>
             <label style={{ display: "inline-flex", gap: 8 }}>
               <input type="hidden" name="priceSyncEnabled" value="false" />
