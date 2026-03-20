@@ -58,6 +58,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       body = (await request.json()) as SettingsPayload;
     } else {
       const form = await request.formData();
+      const priceSyncEnabledValues = form
+        .getAll("priceSyncEnabled")
+        .map((value) => value.toString());
       const syncFields = form
         .get("syncFields")
         ?.toString()
@@ -67,7 +70,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       body = {
         syncFrequencyMinutes: Number(form.get("syncFrequencyMinutes") || 30),
         syncFields,
-        priceSyncEnabled: form.get("priceSyncEnabled")?.toString() === "true",
+        priceSyncEnabled: priceSyncEnabledValues.includes("true"),
         fixedFxRate: Number(form.get("fixedFxRate") || 150),
         roundRule: form.get("roundRule")?.toString() || "nearest",
         errorNotifyEmail: form.get("errorNotifyEmail")?.toString() || null,
