@@ -75,6 +75,9 @@ const textMap = {
     syncFields: "同期フィールド（カンマ区切り）",
     fixedFxRate: "固定為替レート",
     roundRule: "丸めルール",
+    roundNearest: "四捨五入",
+    roundUp: "切り上げ",
+    roundDown: "切り捨て",
     errorNotifyEmail: "通知メール",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
@@ -178,6 +181,9 @@ const textMap = {
     syncFields: "Sync Fields (comma separated)",
     fixedFxRate: "Fixed FX Rate",
     roundRule: "Round Rule",
+    roundNearest: "Nearest",
+    roundUp: "Round Up",
+    roundDown: "Round Down",
     errorNotifyEmail: "Error Notify Email",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
@@ -672,11 +678,11 @@ export default function SyncConsolePage() {
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.roundRule}</span>
-              <input
-                type="text"
-                name="roundRule"
-                defaultValue={currentSettings?.roundRule ?? "nearest"}
-              />
+              <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
+                <option value="nearest">{t.roundNearest}</option>
+                <option value="up">{t.roundUp}</option>
+                <option value="down">{t.roundDown}</option>
+              </select>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.errorNotifyEmail}</span>
