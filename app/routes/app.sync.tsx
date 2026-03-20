@@ -18,8 +18,8 @@ type Lang = "ja" | "en";
 const textMap = {
   ja: {
     pageHeading: "同期コンソール",
-    quickActions: "画面更新",
-    quickActionsDesc: "通常は下のセクションだけ見れば操作できます。困ったときだけ再読み込みしてください。",
+    quickActions: "表示",
+    quickActionsDesc: "ここでは表示言語だけ切り替えられます。",
     gettingStarted: "使い方",
     gettingStartedDesc: "この画面は 1. eBay接続 → 2. 設定保存 → 3. 同期実行 → 4. 結果確認 の順で使います。",
     step1: "1. eBayアカウントを接続する",
@@ -36,7 +36,7 @@ const textMap = {
     notConnected: "未接続",
     syncAccount: "同期対象アカウント",
     autoFirstConnected: "自動（最初の接続済み）",
-    refreshStatus: "同期ステータス更新",
+    refreshStatus: "接続状態を更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
     loadConflicts: "競合を読み込む",
@@ -121,8 +121,8 @@ const textMap = {
   },
   en: {
     pageHeading: "Sync Console",
-    quickActions: "Refresh",
-    quickActionsDesc: "In normal use, the sections below are enough. Use refresh only when the screen looks stale.",
+    quickActions: "Display",
+    quickActionsDesc: "Use this area only to switch the display language.",
     gettingStarted: "How To Use",
     gettingStartedDesc: "Use this screen in order: 1. Connect eBay, 2. Save settings, 3. Run sync, 4. Check results.",
     step1: "1. Connect your eBay account",
@@ -139,7 +139,7 @@ const textMap = {
     notConnected: "Not connected",
     syncAccount: "Sync Account",
     autoFirstConnected: "Auto (first connected)",
-    refreshStatus: "Refresh Sync Status",
+    refreshStatus: "Refresh Connection Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
     loadConflicts: "Load Conflicts",
@@ -436,7 +436,6 @@ export default function SyncConsolePage() {
         <s-stack direction="inline" gap="base">
           <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
           <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
-          <s-button onClick={refreshAll} {...(statusFetcher.state !== "idle" || runsFetcher.state !== "idle" || settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.refreshStatus}</s-button>
         </s-stack>
       </s-section>
 
@@ -447,6 +446,14 @@ export default function SyncConsolePage() {
             ? `現在の接続数: ${activeConnectedCount} / 4`
             : `Connected now: ${activeConnectedCount} / 4`}
         </s-box>
+        <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <s-button
+            onClick={refreshAll}
+            {...(statusFetcher.state !== "idle" || runsFetcher.state !== "idle" || settingsFetcher.state !== "idle" ? { loading: true } : {})}
+          >
+            {t.refreshStatus}
+          </s-button>
+        </div>
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
           {accountSlots.map((slotLabel, index) => {
             const checkpoint = checkpointByLabel.get(slotLabel);
