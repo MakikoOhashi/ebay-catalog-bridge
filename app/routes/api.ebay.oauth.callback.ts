@@ -22,6 +22,51 @@ type EbayTokenResponse = {
   error_description?: string;
 };
 
+function getTradingApiUrl() {
+  return process.env.EBAY_ENV === "sandbox"
+    ? "https://api.sandbox.ebay.com/ws/api.dll"
+    : "https://api.ebay.com/ws/api.dll";
+}
+
+function decodeXml(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function extractTagValue(block: string, tag: string) {
+  const match = block.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "i"));
+  return match ? decodeXml(match[1].trim()) : null;
+}
+
+async function fetchEbayUserId(accessToken: string): Promise<string | null> {
+  const response = await fetch(getTradingApiUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/xml",
+      "X-EBAY-API-CALL-NAME": "GetUser",
+      "X-EBAY-API-COMPATIBILITY-LEVEL": "1231",
+      "X-EBAY-API-SITEID": "0",
+      "X-EBAY-API-IAF-TOKEN": accessToken,
+    },
+    body: `<?xml version="1.0" encoding="utf-8"?>
+<GetUserRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+  <DetailLevel>ReturnAll</DetailLevel>
+</GetUserRequest>`,
+  });
+
+  const text = await response.text();
+  if (!response.ok) return null;
+
+  const ack = extractTagValue(text, "Ack");
+  if (ack && ack !== "Success" && ack !== "Warning") return null;
+
+  return extractTagValue(text, "UserID") || null;
+}
+
 function verifyState(state: string): OAuthStatePayload | null {
   const secret =
     process.env.EBAY_OAUTH_STATE_SECRET || process.env.SHOPIFY_API_SECRET;
@@ -126,6 +171,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
   }
 
+  const ebayUserId = tokenJson.access_token
+    ? await fetchEbayUserId(tokenJson.access_token)
+    : null;
+
   const store = await db.store.upsert({
     where: { shop: parsedState.shop },
     create: { shop: parsedState.shop },
@@ -142,6 +191,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       await db.ebayAccount.update({
         where: { id: target.id },
         data: {
+          ebayUserId,
           refreshTokenEnc: tokenJson.refresh_token,
           scopes: normalizeScopes(tokenJson.scope),
           status: "connected",
@@ -164,11 +214,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     create: {
       storeId: store.id,
       label,
+      ebayUserId,
       refreshTokenEnc: tokenJson.refresh_token,
       scopes: normalizeScopes(tokenJson.scope),
       status: "connected",
     },
     update: {
+      ebayUserId,
       refreshTokenEnc: tokenJson.refresh_token,
       scopes: normalizeScopes(tokenJson.scope),
       status: "connected",

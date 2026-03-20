@@ -51,8 +51,10 @@ const textMap = {
     conflicts: "競合",
     missing: "欠損",
     errors: "エラー",
-    runSync: "同期実行",
-    runSyncDesc: "普段はここだけ使えば大丈夫です。通常運用はcronで自動実行されますが、確認したいときはここから手動で実行できます。",
+    runSync: "手動同期",
+    runSyncDesc: "通常は自動で同期されるため、普段は操作不要です。確認したいときだけ、ここから手動で同期できます。",
+    reflectTestAccount: "テストに使うアカウント",
+    reflectTestRun: "反映テストを実行",
     reflectTest: "反映テスト（任意）",
     reflectTestDesc: "入力した商品をテスト用に追加して、反映される内容を確認できます。確認用の機能なので、本番データをそのまま登録するものではありません。",
     reflectTestEmpty: "通常のeBay同期では、この入力は空欄のままでOKです。",
@@ -85,6 +87,11 @@ const textMap = {
     fxModeFixed: "固定レート",
     fxModeAuto: "自動取得（Frankfurter）",
     fxModeHelp: "自動取得を選ぶと、USD から Shopifyストア通貨へのレートを取得します。",
+    priceAdjustmentPercent: "価格調整（%）",
+    priceAdjustmentFixed: "価格調整（固定額）",
+    priceAdjustmentPercentHelp: "10 で 10%増額、-10 で 10%減額です。",
+    priceAdjustmentFixedHelp: "Shopifyストア通貨で加減算します。300 で +300、-300 で -300 です。",
+    autoFxPair: "変換通貨",
     autoFxLastRate: "前回取得レート",
     autoFxLastFetchedAt: "前回取得日時",
     roundRule: "丸めルール",
@@ -170,8 +177,10 @@ const textMap = {
     conflicts: "Conflicts",
     missing: "Missing",
     errors: "Errors",
-    runSync: "Run Sync",
-    runSyncDesc: "This is the main area you will use. Cron handles normal operation, but you can run sync manually here when checking changes.",
+    runSync: "Manual Sync",
+    runSyncDesc: "Sync usually runs automatically, so you normally do not need to use this section. Use it only when you want to run a manual sync for checking.",
+    reflectTestAccount: "Account For Test Sync",
+    reflectTestRun: "Run Reflection Test",
     reflectTest: "Reflection Test (optional)",
     reflectTestDesc: "You can add test products here to preview how they would sync. This is for testing only and does not directly register production data.",
     reflectTestEmpty: "For normal eBay sync, leave this section empty.",
@@ -204,6 +213,11 @@ const textMap = {
     fxModeFixed: "Fixed Rate",
     fxModeAuto: "Auto Fetch (Frankfurter)",
     fxModeHelp: "Auto mode fetches the USD to Shopify store currency rate.",
+    priceAdjustmentPercent: "Price Adjustment (%)",
+    priceAdjustmentFixed: "Price Adjustment (Fixed Amount)",
+    priceAdjustmentPercentHelp: "Use 10 for +10%, or -10 for a 10% discount.",
+    priceAdjustmentFixedHelp: "Applied in the Shopify store currency. Use 300 for +300, or -300 for -300.",
+    autoFxPair: "Currency Pair",
     autoFxLastRate: "Last fetched rate",
     autoFxLastFetchedAt: "Last fetched at",
     roundRule: "Round Rule",
@@ -292,6 +306,7 @@ type SyncStatusPayload = {
   checkpoints?: Array<{
     ebayAccountId: number;
     label: string;
+    ebayUserId?: string | null;
     status: string;
   }>;
 };
@@ -320,6 +335,8 @@ type SettingsResponsePayload = {
     priceSyncEnabled: boolean;
     fxRateMode: string;
     fixedFxRate: number;
+    priceAdjustmentPercent: number;
+    priceAdjustmentFixed: number;
     autoFxLastRate?: number | null;
     autoFxLastFetchedAt?: string | null;
     autoFxLastTargetCurrency?: string | null;
@@ -364,6 +381,7 @@ export default function SyncConsolePage() {
   const [lang, setLang] = useState<Lang>("ja");
   const [testItems, setTestItems] = useState<TestItemDraft[]>([createEmptyTestItem()]);
   const [advancedItemsJson, setAdvancedItemsJson] = useState("");
+  const [selectedFxRateMode, setSelectedFxRateMode] = useState<"fixed" | "auto">("fixed");
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("syncConsoleLang") : null;
@@ -449,6 +467,12 @@ export default function SyncConsolePage() {
   const currentSettings = settingsFetcher.data?.settings || null;
   const accountSlots = ["primary", "account-2", "account-3", "account-4"];
 
+  useEffect(() => {
+    if (currentSettings?.fxRateMode === "auto" || currentSettings?.fxRateMode === "fixed") {
+      setSelectedFxRateMode(currentSettings.fxRateMode);
+    }
+  }, [currentSettings?.fxRateMode]);
+
   const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
   const refreshAll = () => {
     statusFetcher.load("/api/sync/status");
@@ -461,6 +485,12 @@ export default function SyncConsolePage() {
     const advanced = advancedItemsJson.trim();
     return advanced || serializeTestItems(testItems);
   }, [advancedItemsJson, testItems]);
+  const autoFxTargetCurrency = currentSettings?.autoFxLastTargetCurrency || null;
+  const autoFxPairLabel = autoFxTargetCurrency ? `USD -> ${autoFxTargetCurrency}` : "-";
+  const autoFxRateLabel =
+    currentSettings?.autoFxLastRate != null && autoFxTargetCurrency
+      ? `1 USD = ${currentSettings.autoFxLastRate} ${autoFxTargetCurrency}`
+      : "-";
 
   return (
     <s-page heading={t.pageHeading}>
@@ -469,19 +499,7 @@ export default function SyncConsolePage() {
         <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
       </div>
 
-      <s-section heading={t.gettingStarted}>
-        <s-paragraph>{t.gettingStartedDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <div style={{ display: "grid", gap: 8 }}>
-            <div>{t.step1}</div>
-            <div>{t.step2}</div>
-            <div>{t.step3}</div>
-            <div>{t.step4}</div>
-          </div>
-        </s-box>
-      </s-section>
-
-      <s-section heading={t.accountConnections}>
+      <s-section heading={t.step1}>
         <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
         <div style={{ marginBottom: 12 }}>
           {lang === "ja"
@@ -500,10 +518,14 @@ export default function SyncConsolePage() {
           {accountSlots.map((slotLabel, index) => {
             const checkpoint = checkpointByLabel.get(slotLabel);
             const isConnected = checkpoint?.status === "connected";
+            const accountDisplayName = checkpoint?.ebayUserId?.trim() || slotLabel;
             return (
               <s-box key={slotLabel} borderWidth="base" borderRadius="base" padding="base">
                 <s-stack direction="block" gap="base">
-                  <span>{t.slot} {index + 1}: {slotLabel}</span>
+                  <span>{t.slot} {index + 1}: {accountDisplayName}</span>
+                  {checkpoint?.ebayUserId ? (
+                    <small style={{ color: "#666" }}>{slotLabel}</small>
+                  ) : null}
                   <s-badge tone={isConnected ? "success" : "neutral"}>
                     {isConnected
                       ? `${t.connected} (#${checkpoint?.ebayAccountId})`
@@ -534,142 +556,7 @@ export default function SyncConsolePage() {
         </div>
       </s-section>
 
-      <s-section heading={t.latestSummary}>
-        <s-paragraph>{t.latestSummaryDesc}</s-paragraph>
-        <s-stack direction="inline" gap="base">
-          <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
-          <span>{t.runId}: {latestRun?.id ?? "-"}</span>
-          <span>{t.syncAccount}: {latestRun?.ebayAccountId ?? "-"}</span>
-          <span>{t.started}: {formatDate(latestRun?.startedAt)}</span>
-          <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
-        </s-stack>
-        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.created}: {latestRun?.createdCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.updated}: {latestRun?.updatedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.skipped}: {latestRun?.skippedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.conflicts}: {latestRun?.conflictCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.missing}: {latestRun?.missingCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.errors}: {latestRun?.errorCount ?? 0}</s-box>
-        </div>
-      </s-section>
-
-      <s-section heading={t.runSync}>
-        <s-paragraph>{t.runSyncDesc}</s-paragraph>
-        <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
-          <input type="hidden" name="shop" value={shop} />
-          <input type="hidden" name="mode" value="rolling" />
-          <input type="hidden" name="fullScanComplete" value="false" />
-          <input type="hidden" name="itemsJson" value={serializedTestItems} />
-          <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-            <span>{t.syncAccount}</span>
-            <select name="ebayAccountId" defaultValue="">
-              <option value="">{t.autoFirstConnected}</option>
-              {connectedCheckpoints.map((checkpoint) => (
-                <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
-                  #{checkpoint.ebayAccountId} ({checkpoint.label}) - {checkpoint.status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <s-stack direction="block" gap="base">
-              <strong>{t.reflectTest}</strong>
-              <s-paragraph>{t.reflectTestDesc}</s-paragraph>
-              <small>{t.reflectTestEmpty}</small>
-              {testItems.map((item, index) => (
-                <div
-                  key={`test-item-${index}`}
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                    padding: 12,
-                    border: "1px solid var(--s-color-border-default)",
-                    borderRadius: 8,
-                    maxWidth: 520,
-                  }}
-                >
-                  <strong>{t.testItem} {index + 1}</strong>
-                  <label style={{ display: "grid", gap: 4 }}>
-                    <span>{t.sku}</span>
-                    <input
-                      type="text"
-                      value={item.sku}
-                      onChange={(event) => {
-                        const next = [...testItems];
-                        next[index] = { ...next[index], sku: event.target.value };
-                        setTestItems(next);
-                      }}
-                    />
-                  </label>
-                  <label style={{ display: "grid", gap: 4 }}>
-                    <span>{t.itemId}</span>
-                    <input
-                      type="text"
-                      value={item.itemId}
-                      onChange={(event) => {
-                        const next = [...testItems];
-                        next[index] = { ...next[index], itemId: event.target.value };
-                        setTestItems(next);
-                      }}
-                    />
-                  </label>
-                  <label style={{ display: "grid", gap: 4 }}>
-                    <span>{t.lastModified}</span>
-                    <input
-                      type="text"
-                      placeholder="2026-03-05T00:00:00Z"
-                      value={item.lastModified}
-                      onChange={(event) => {
-                        const next = [...testItems];
-                        next[index] = { ...next[index], lastModified: event.target.value };
-                        setTestItems(next);
-                      }}
-                    />
-                  </label>
-                  {testItems.length > 1 ? (
-                    <s-button
-                      variant="secondary"
-                      onClick={() => setTestItems(testItems.filter((_, itemIndex) => itemIndex !== index))}
-                    >
-                      {t.removeTestItem}
-                    </s-button>
-                  ) : null}
-                </div>
-              ))}
-              <s-button variant="secondary" onClick={() => setTestItems([...testItems, createEmptyTestItem()])}>
-                {t.addTestItem}
-              </s-button>
-              <details>
-                <summary>{t.advancedJson}</summary>
-                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-                  <small>{t.advancedJsonDesc}</small>
-                  <textarea
-                    rows={8}
-                    value={advancedItemsJson}
-                    onChange={(event) => setAdvancedItemsJson(event.target.value)}
-                    style={{ minWidth: 420 }}
-                    placeholder={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"}\n]`}
-                  />
-                </div>
-              </details>
-            </s-stack>
-          </s-box>
-          <label style={{ display: "inline-flex", gap: 8 }}>
-            <input type="checkbox" name="fullScanComplete" value="true" />
-            <span>{t.forceFullScan}</span>
-          </label>
-          <small>{t.forceFullScanHelp}</small>
-          <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
-        </enqueueFetcher.Form>
-        <retryFetcher.Form method="post" action="/api/sync/retry">
-          <s-button type="submit" {...(retryFetcher.state !== "idle" ? { loading: true } : {})}>{t.retryLatest}</s-button>
-        </retryFetcher.Form>
-        <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
-          <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>{t.sendTestAlert}</s-button>
-        </notifyTestFetcher.Form>
-      </s-section>
-
-      <s-section heading={t.settings}>
+      <s-section heading={t.step2}>
         <s-paragraph>{t.settingsDesc}</s-paragraph>
         {currentSettings ? (
           <s-box padding="base" borderWidth="base" borderRadius="base">
@@ -679,7 +566,10 @@ export default function SyncConsolePage() {
               <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
               <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
               <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
-              <div>{t.autoFxLastRate}: {currentSettings.autoFxLastRate ?? "-"}</div>
+              <div>{t.priceAdjustmentPercent}: {currentSettings.priceAdjustmentPercent}%</div>
+              <div>{t.priceAdjustmentFixed}: {currentSettings.priceAdjustmentFixed}</div>
+              <div>{t.autoFxPair}: {autoFxPairLabel}</div>
+              <div>{t.autoFxLastRate}: {autoFxRateLabel}</div>
               <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
               <div>{t.roundRule}: {currentSettings.roundRule}</div>
               <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
@@ -720,7 +610,13 @@ export default function SyncConsolePage() {
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fxRateMode}</span>
-              <select name="fxRateMode" defaultValue={currentSettings?.fxRateMode ?? "fixed"}>
+              <select
+                name="fxRateMode"
+                value={selectedFxRateMode}
+                onChange={(event) =>
+                  setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
+                }
+              >
                 <option value="fixed">{t.fxModeFixed}</option>
                 <option value="auto">{t.fxModeAuto}</option>
               </select>
@@ -728,12 +624,40 @@ export default function SyncConsolePage() {
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fixedFxRate}</span>
+              {selectedFxRateMode === "auto" ? (
+                <input
+                  type="hidden"
+                  name="fixedFxRate"
+                  value={currentSettings?.fixedFxRate ?? 150}
+                />
+              ) : null}
               <input
                 type="number"
                 name="fixedFxRate"
                 step="0.01"
                 defaultValue={currentSettings?.fixedFxRate ?? 150}
+                disabled={selectedFxRateMode === "auto"}
               />
+            </label>
+            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+              <span>{t.priceAdjustmentPercent}</span>
+              <input
+                type="number"
+                name="priceAdjustmentPercent"
+                step="0.01"
+                defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+              />
+              <small>{t.priceAdjustmentPercentHelp}</small>
+            </label>
+            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+              <span>{t.priceAdjustmentFixed}</span>
+              <input
+                type="number"
+                name="priceAdjustmentFixed"
+                step="0.01"
+                defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+              />
+              <small>{t.priceAdjustmentFixedHelp}</small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.roundRule}</span>
@@ -769,26 +693,209 @@ export default function SyncConsolePage() {
         </settingsFetcher.Form>
       </s-section>
 
-      <s-section heading={t.resolveConflict}>
-        <details>
-          <summary>{t.resolveConflict}</summary>
-          <div style={{ marginTop: 12 }}>
-            <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
-            <resolveConflictFetcher.Form method="post" action="/api/conflicts">
-              <s-stack direction="block" gap="base">
-                <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
-                  <span>{t.conflictId}</span>
-                  <input type="number" name="conflictId" />
+      <s-section heading={t.step3}>
+        <s-paragraph>{t.runSyncDesc}</s-paragraph>
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          <s-stack direction="block" gap="base">
+            <strong>{t.runSync}</strong>
+            <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
+              <input type="hidden" name="shop" value={shop} />
+              <input type="hidden" name="mode" value="rolling" />
+              <input type="hidden" name="fullScanComplete" value="false" />
+              <input type="hidden" name="itemsJson" value="" />
+              <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+                <span>{t.syncAccount}</span>
+                <select name="ebayAccountId" defaultValue="">
+                  <option value="">{t.autoFirstConnected}</option>
+                  {connectedCheckpoints.map((checkpoint) => (
+                    <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
+                      #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "inline-flex", gap: 8 }}>
+                <input type="checkbox" name="fullScanComplete" value="true" />
+                <span>{t.forceFullScan}</span>
+              </label>
+              <small>{t.forceFullScanHelp}</small>
+              <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
+            </enqueueFetcher.Form>
+            <retryFetcher.Form method="post" action="/api/sync/retry">
+              <s-button type="submit" {...(retryFetcher.state !== "idle" ? { loading: true } : {})}>{t.retryLatest}</s-button>
+            </retryFetcher.Form>
+            <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
+              <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>{t.sendTestAlert}</s-button>
+            </notifyTestFetcher.Form>
+          </s-stack>
+        </s-box>
+
+        <div style={{ marginTop: 16 }}>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <s-stack direction="block" gap="base">
+              <strong>{t.reflectTest}</strong>
+              <s-paragraph>{t.reflectTestDesc}</s-paragraph>
+              <small>{t.reflectTestEmpty}</small>
+              <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
+                <input type="hidden" name="shop" value={shop} />
+                <input type="hidden" name="mode" value="rolling" />
+                <input type="hidden" name="fullScanComplete" value="false" />
+                <input type="hidden" name="itemsJson" value={serializedTestItems} />
+                <label style={{ display: "grid", gap: 4, maxWidth: 360, marginTop: 12 }}>
+                  <span>{t.reflectTestAccount}</span>
+                  <select name="ebayAccountId" defaultValue="">
+                    <option value="">{t.autoFirstConnected}</option>
+                    {connectedCheckpoints.map((checkpoint) => (
+                      <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
+                        #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.note}</span>
-                  <input type="text" name="note" placeholder="resolved manually" />
-                </label>
-                <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
-              </s-stack>
-            </resolveConflictFetcher.Form>
-          </div>
-        </details>
+                {testItems.map((item, index) => (
+                  <div
+                    key={`test-item-${index}`}
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      padding: 12,
+                      border: "1px solid var(--s-color-border-default)",
+                      borderRadius: 8,
+                      maxWidth: 520,
+                      marginTop: 12,
+                    }}
+                  >
+                    <strong>{t.testItem} {index + 1}</strong>
+                    <label style={{ display: "grid", gap: 4 }}>
+                      <span>{t.sku}</span>
+                      <input
+                        type="text"
+                        value={item.sku}
+                        onChange={(event) => {
+                          const next = [...testItems];
+                          next[index] = { ...next[index], sku: event.target.value };
+                          setTestItems(next);
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "grid", gap: 4 }}>
+                      <span>{t.itemId}</span>
+                      <input
+                        type="text"
+                        value={item.itemId}
+                        onChange={(event) => {
+                          const next = [...testItems];
+                          next[index] = { ...next[index], itemId: event.target.value };
+                          setTestItems(next);
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "grid", gap: 4 }}>
+                      <span>{t.lastModified}</span>
+                      <input
+                        type="text"
+                        placeholder="2026-03-05T00:00:00Z"
+                        value={item.lastModified}
+                        onChange={(event) => {
+                          const next = [...testItems];
+                          next[index] = { ...next[index], lastModified: event.target.value };
+                          setTestItems(next);
+                        }}
+                      />
+                    </label>
+                    {testItems.length > 1 ? (
+                      <s-button
+                        variant="secondary"
+                        onClick={() => setTestItems(testItems.filter((_, itemIndex) => itemIndex !== index))}
+                      >
+                        {t.removeTestItem}
+                      </s-button>
+                    ) : null}
+                  </div>
+                ))}
+                <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+                  <s-button variant="secondary" onClick={() => setTestItems([...testItems, createEmptyTestItem()])}>
+                    {t.addTestItem}
+                  </s-button>
+                  <details>
+                    <summary>{t.advancedJson}</summary>
+                    <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                      <small>{t.advancedJsonDesc}</small>
+                      <textarea
+                        rows={8}
+                        value={advancedItemsJson}
+                        onChange={(event) => setAdvancedItemsJson(event.target.value)}
+                        style={{ minWidth: 420 }}
+                        placeholder={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"}\n]`}
+                      />
+                    </div>
+                  </details>
+                  <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.reflectTestRun}</s-button>
+                </div>
+              </enqueueFetcher.Form>
+            </s-stack>
+          </s-box>
+        </div>
+      </s-section>
+
+      <s-section heading={t.step4}>
+        <s-paragraph>{t.latestSummaryDesc}</s-paragraph>
+        <s-stack direction="inline" gap="base">
+          <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
+          <span>{t.runId}: {latestRun?.id ?? "-"}</span>
+          <span>{t.syncAccount}: {latestRun?.ebayAccountId ?? "-"}</span>
+          <span>{t.started}: {formatDate(latestRun?.startedAt)}</span>
+          <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
+        </s-stack>
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.created}: {latestRun?.createdCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.updated}: {latestRun?.updatedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.skipped}: {latestRun?.skippedCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.conflicts}: {latestRun?.conflictCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.missing}: {latestRun?.missingCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{t.errors}: {latestRun?.errorCount ?? 0}</s-box>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <s-paragraph>{t.runHistoryDesc}</s-paragraph>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            {runs.length === 0 ? (
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th align="left">{t.run}</th>
+                      <th align="left">{t.status}</th>
+                      <th align="left">{t.mode}</th>
+                      <th align="left">{t.started}</th>
+                      <th align="left">{t.processed}</th>
+                      <th align="left">{t.created}</th>
+                      <th align="left">{t.updated}</th>
+                      <th align="left">{t.errors}</th>
+                      <th align="left">{t.missing}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {runs.map((run) => (
+                      <tr key={run.id}>
+                        <td>{run.id}</td>
+                        <td>{run.status}</td>
+                        <td>{run.mode}</td>
+                        <td>{formatDate(run.startedAt)}</td>
+                        <td>{`${run.processedItems}/${run.totalItems}`}</td>
+                        <td>{run.createdCount}</td>
+                        <td>{run.updatedCount}</td>
+                        <td>{run.errorCount}</td>
+                        <td>{run.missingCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </s-box>
+        </div>
       </s-section>
 
       <s-section heading={t.syncErrors}>
@@ -808,50 +915,27 @@ export default function SyncConsolePage() {
         </errorsFetcher.Form>
       </s-section>
 
-      <s-section heading={t.runHistory}>
-        <s-paragraph>{t.runHistoryDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          {runs.length === 0 ? (
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th align="left">{t.run}</th>
-                    <th align="left">{t.status}</th>
-                    <th align="left">{t.mode}</th>
-                    <th align="left">{t.started}</th>
-                    <th align="left">{t.processed}</th>
-                    <th align="left">{t.created}</th>
-                    <th align="left">{t.updated}</th>
-                    <th align="left">{t.errors}</th>
-                    <th align="left">{t.missing}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run) => (
-                    <tr key={run.id}>
-                      <td>{run.id}</td>
-                      <td>{run.status}</td>
-                      <td>{run.mode}</td>
-                      <td>{formatDate(run.startedAt)}</td>
-                      <td>{`${run.processedItems}/${run.totalItems}`}</td>
-                      <td>{run.createdCount}</td>
-                      <td>{run.updatedCount}</td>
-                      <td>{run.errorCount}</td>
-                      <td>{run.missingCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </s-box>
-      </s-section>
-
       <s-section heading={t.debugData}>
         <s-paragraph>{t.debugDataDesc}</s-paragraph>
+        <details>
+          <summary>{t.resolveConflict}</summary>
+          <div style={{ marginTop: 12 }}>
+            <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
+            <resolveConflictFetcher.Form method="post" action="/api/conflicts">
+              <s-stack direction="block" gap="base">
+                <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
+                  <span>{t.conflictId}</span>
+                  <input type="number" name="conflictId" />
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.note}</span>
+                  <input type="text" name="note" placeholder="resolved manually" />
+                </label>
+                <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
+              </s-stack>
+            </resolveConflictFetcher.Form>
+          </div>
+        </details>
         <details>
           <summary>{t.syncStatusJson}</summary>
           <s-box padding="base" borderWidth="base" borderRadius="base">

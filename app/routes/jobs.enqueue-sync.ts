@@ -280,6 +280,8 @@ function applyRoundRule(value: number, roundRule?: string | null) {
 function convertEbayPriceToShopify(input: {
   price?: number | null;
   fixedFxRate?: number | null;
+  priceAdjustmentPercent?: number | null;
+  priceAdjustmentFixed?: number | null;
   roundRule?: string | null;
 }) {
   if (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price < 0) {
@@ -291,8 +293,18 @@ function convertEbayPriceToShopify(input: {
       ? input.fixedFxRate
       : 1;
 
+  const percentMultiplier =
+    typeof input.priceAdjustmentPercent === "number" && Number.isFinite(input.priceAdjustmentPercent)
+      ? 1 + input.priceAdjustmentPercent / 100
+      : 1;
+  const fixedAdjustment =
+    typeof input.priceAdjustmentFixed === "number" && Number.isFinite(input.priceAdjustmentFixed)
+      ? input.priceAdjustmentFixed
+      : 0;
+
   const converted = input.price * fxRate;
-  const rounded = applyRoundRule(converted, input.roundRule);
+  const adjusted = converted * percentMultiplier + fixedAdjustment;
+  const rounded = applyRoundRule(adjusted, input.roundRule);
   return rounded >= 0 ? rounded : null;
 }
 
@@ -1487,6 +1499,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             ? convertEbayPriceToShopify({
                 price: item.price ?? null,
                 fixedFxRate: activeFxRate,
+                priceAdjustmentPercent: store.priceAdjustmentPercent,
+                priceAdjustmentFixed: store.priceAdjustmentFixed,
                 roundRule: store.roundRule,
               })
             : null,

@@ -8,6 +8,8 @@ type SettingsPayload = {
   priceSyncEnabled?: boolean;
   fxRateMode?: string;
   fixedFxRate?: number;
+  priceAdjustmentPercent?: number;
+  priceAdjustmentFixed?: number;
   roundRule?: string;
   errorNotifyEmail?: string | null;
 };
@@ -41,6 +43,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       autoFxLastRate: store.autoFxLastRate,
       autoFxLastFetchedAt: store.autoFxLastFetchedAt,
       autoFxLastTargetCurrency: store.autoFxLastTargetCurrency,
+      priceAdjustmentPercent: store.priceAdjustmentPercent,
+      priceAdjustmentFixed: store.priceAdjustmentFixed,
       roundRule: store.roundRule,
       errorNotifyEmail: store.errorNotifyEmail,
     },
@@ -76,6 +80,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         priceSyncEnabled: priceSyncEnabledValues.includes("true"),
         fxRateMode: form.get("fxRateMode")?.toString() || "fixed",
         fixedFxRate: Number(form.get("fixedFxRate") || 150),
+        priceAdjustmentPercent: Number(form.get("priceAdjustmentPercent") || 0),
+        priceAdjustmentFixed: Number(form.get("priceAdjustmentFixed") || 0),
         roundRule: form.get("roundRule")?.toString() || "nearest",
         errorNotifyEmail: form.get("errorNotifyEmail")?.toString() || null,
       };
@@ -102,6 +108,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           : store.fxRateMode,
       fixedFxRate:
         body.fixedFxRate && body.fixedFxRate > 0 ? body.fixedFxRate : store.fixedFxRate,
+      priceAdjustmentPercent:
+        typeof body.priceAdjustmentPercent === "number" &&
+        Number.isFinite(body.priceAdjustmentPercent)
+          ? body.priceAdjustmentPercent
+          : store.priceAdjustmentPercent,
+      priceAdjustmentFixed:
+        typeof body.priceAdjustmentFixed === "number" && Number.isFinite(body.priceAdjustmentFixed)
+          ? body.priceAdjustmentFixed
+          : store.priceAdjustmentFixed,
       roundRule: body.roundRule?.trim() || store.roundRule,
       errorNotifyEmail: body.errorNotifyEmail?.trim() || null,
     },
@@ -118,6 +133,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       autoFxLastRate: updated.autoFxLastRate,
       autoFxLastFetchedAt: updated.autoFxLastFetchedAt,
       autoFxLastTargetCurrency: updated.autoFxLastTargetCurrency,
+      priceAdjustmentPercent: updated.priceAdjustmentPercent,
+      priceAdjustmentFixed: updated.priceAdjustmentFixed,
       roundRule: updated.roundRule,
       errorNotifyEmail: updated.errorNotifyEmail,
     },

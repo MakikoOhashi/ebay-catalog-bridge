@@ -37,6 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         select: {
           id: true,
           label: true,
+          ebayUserId: true,
           status: true,
           checkpoint: {
             select: {
@@ -67,6 +68,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     checkpoints: store.ebayAccounts.map((account) => ({
       ebayAccountId: account.id,
       label: account.label,
+      ebayUserId: account.ebayUserId,
       status: account.status,
       checkpoint: account.checkpoint ?? null,
     })),

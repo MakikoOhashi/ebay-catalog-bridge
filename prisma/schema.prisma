@@ -77,6 +77,8 @@ model Store {
   autoFxLastRate Float?      @map("auto_fx_last_rate")
   autoFxLastFetchedAt DateTime? @map("auto_fx_last_fetched_at")
   autoFxLastTargetCurrency String? @map("auto_fx_last_target_currency")
+  priceAdjustmentPercent Float @default(0) @map("price_adjustment_percent")
+  priceAdjustmentFixed Float   @default(0) @map("price_adjustment_fixed")
   roundRule     String       @default("nearest") @map("round_rule")
   errorNotifyEmail String?   @map("error_notify_email")
   ebayAccounts EbayAccount[]
