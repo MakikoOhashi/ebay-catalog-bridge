@@ -809,12 +809,14 @@ function decodeXml(value: string) {
 }
 
 function extractTagValue(block: string, tag: string) {
-  const match = block.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
+  const match = block.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "i"));
   return match ? decodeXml(match[1].trim()) : null;
 }
 
 function extractTagBlocks(block: string, tag: string) {
-  return Array.from(block.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "gi"))).map(
+  return Array.from(
+    block.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "gi")),
+  ).map(
     (match) => match[1],
   );
 }
