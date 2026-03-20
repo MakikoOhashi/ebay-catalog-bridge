@@ -446,11 +446,11 @@ export default function SyncConsolePage() {
 
       <s-section heading={t.accountConnections}>
         <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
+        <div style={{ marginBottom: 12 }}>
           {lang === "ja"
             ? `現在の接続数: ${activeConnectedCount} / 4`
             : `Connected now: ${activeConnectedCount} / 4`}
-        </s-box>
+        </div>
         <div style={{ marginTop: 12, marginBottom: 12 }}>
           <s-button
             onClick={refreshAll}
