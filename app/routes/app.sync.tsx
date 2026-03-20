@@ -89,8 +89,8 @@ const textMap = {
     errorNotifyEmailHelp: "メール通知はまだ未実装です。現在はSlack通知のみ動作します。",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
-    resolveConflict: "競合解消",
-    resolveConflictDesc: "同じSKUが複数eBayアカウントにあるときだけ使います。普段は触らなくて大丈夫です。",
+    resolveConflict: "運用者向け: 競合解消",
+    resolveConflictDesc: "同じSKUが複数eBayアカウントにあるときだけ使います。通常は閉じたままで大丈夫です。",
     conflictId: "競合ID",
     note: "メモ",
     resolve: "解消する",
@@ -202,8 +202,8 @@ const textMap = {
     errorNotifyEmailHelp: "Email notifications are not implemented yet. Only Slack notifications are active right now.",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
-    resolveConflict: "Resolve Conflict",
-    resolveConflictDesc: "Use this only when the same SKU exists in multiple eBay accounts. Most users can ignore it.",
+    resolveConflict: "Operator Only: Resolve Conflict",
+    resolveConflictDesc: "Use this only when the same SKU exists in multiple eBay accounts. Normally you can leave this closed.",
     conflictId: "Conflict ID",
     note: "Note",
     resolve: "Resolve Conflict",
@@ -743,20 +743,25 @@ export default function SyncConsolePage() {
       </s-section>
 
       <s-section heading={t.resolveConflict}>
-        <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
-        <resolveConflictFetcher.Form method="post" action="/api/conflicts">
-          <s-stack direction="block" gap="base">
-            <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
-              <span>{t.conflictId}</span>
-              <input type="number" name="conflictId" />
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-              <span>{t.note}</span>
-              <input type="text" name="note" placeholder="resolved manually" />
-            </label>
-            <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
-          </s-stack>
-        </resolveConflictFetcher.Form>
+        <details>
+          <summary>{t.resolveConflict}</summary>
+          <div style={{ marginTop: 12 }}>
+            <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
+            <resolveConflictFetcher.Form method="post" action="/api/conflicts">
+              <s-stack direction="block" gap="base">
+                <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
+                  <span>{t.conflictId}</span>
+                  <input type="number" name="conflictId" />
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.note}</span>
+                  <input type="text" name="note" placeholder="resolved manually" />
+                </label>
+                <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
+              </s-stack>
+            </resolveConflictFetcher.Form>
+          </div>
+        </details>
       </s-section>
 
       <s-section heading={t.syncErrors}>
