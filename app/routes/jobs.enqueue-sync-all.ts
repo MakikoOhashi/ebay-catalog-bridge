@@ -84,44 +84,57 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const targetUrl = new URL("/jobs/enqueue-sync", request.url).toString();
 
   for (const store of connectedStores) {
-    const headers = new Headers({ "content-type": "application/json" });
-    if (sharedSecret) headers.set("x-cron-secret", sharedSecret);
-
-    const internalRequest = new Request(targetUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        ...body,
-        shop: store.shop,
-      }),
-    });
-
-    const response = await enqueueSyncAction({
-      request: internalRequest,
-      context: {},
-      params: {},
-    } as ActionFunctionArgs);
-
-    let json: unknown = null;
     try {
-      json = await response.clone().json();
-    } catch {
-      json = { error: "non_json_response" };
-    }
+      const headers = new Headers({ "content-type": "application/json" });
+      if (sharedSecret) headers.set("x-cron-secret", sharedSecret);
 
-    results.push({
-      storeId: store.id,
-      shop: store.shop,
-      accepted:
-        response.ok &&
-        typeof json === "object" &&
-        json !== null &&
-        "accepted" in json
-          ? Boolean((json as { accepted?: boolean }).accepted)
-          : false,
-      status: response.status,
-      result: json,
-    });
+      const internalRequest = new Request(targetUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          ...body,
+          shop: store.shop,
+        }),
+      });
+
+      const response = await enqueueSyncAction({
+        request: internalRequest,
+        context: {},
+        params: {},
+      } as ActionFunctionArgs);
+
+      let json: unknown = null;
+      try {
+        json = await response.clone().json();
+      } catch {
+        json = { error: "non_json_response" };
+      }
+
+      results.push({
+        storeId: store.id,
+        shop: store.shop,
+        accepted:
+          response.ok &&
+          typeof json === "object" &&
+          json !== null &&
+          "accepted" in json
+            ? Boolean((json as { accepted?: boolean }).accepted)
+            : false,
+        status: response.status,
+        result: json,
+      });
+    } catch (error) {
+      results.push({
+        storeId: store.id,
+        shop: store.shop,
+        accepted: false,
+        status: 500,
+        result: {
+          error: "internal_enqueue_sync_error",
+          message: error instanceof Error ? error.message : "Unknown sync-all error.",
+        },
+      });
+    }
   }
 
   const acceptedStores = results.filter((item) => item.accepted).length;
