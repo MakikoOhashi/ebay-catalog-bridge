@@ -72,7 +72,11 @@ model Store {
   syncFrequencyMinutes Int    @default(30) @map("sync_frequency_minutes")
   syncFields    String       @default("title,description,images,weight,stock,price") @map("sync_fields")
   priceSyncEnabled Boolean      @default(false) @map("price_sync_enabled")
+  fxRateMode    String       @default("fixed") @map("fx_rate_mode")
   fixedFxRate   Float        @default(150) @map("fixed_fx_rate")
+  autoFxLastRate Float?      @map("auto_fx_last_rate")
+  autoFxLastFetchedAt DateTime? @map("auto_fx_last_fetched_at")
+  autoFxLastTargetCurrency String? @map("auto_fx_last_target_currency")
   roundRule     String       @default("nearest") @map("round_rule")
   errorNotifyEmail String?   @map("error_notify_email")
   ebayAccounts EbayAccount[]

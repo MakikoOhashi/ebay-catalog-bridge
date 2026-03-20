@@ -1,6 +1,35 @@
-# Shopify App Template - React Router
+# ebay-catalog-bridge
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using [React Router](https://reactrouter.com/). It was forked from the [Shopify Remix app template](https://github.com/Shopify/shopify-app-template-remix) and converted to React Router.
+`ebay-catalog-bridge` is a Shopify embedded app that syncs catalog data from eBay seller accounts into a single Shopify store.
+
+## Price Conversion
+
+This app stores prices in the Shopify store currency.
+
+- When `Price Sync` is enabled, eBay prices are converted before saving to Shopify.
+- In `fixed` mode, the app uses the configured `Fixed FX Rate`.
+- In `auto` mode, the app fetches the latest USD to Shopify store currency rate from [Frankfurter](https://frankfurter.dev/).
+- The current implementation assumes eBay source prices are in USD and converts them into the Shopify store currency.
+- The rounding rule is applied after conversion.
+
+Example:
+
+- eBay price: `USD 200`
+- Fixed FX rate: `150`
+- Shopify store currency: `JPY`
+- Saved Shopify price: `JPY 30000`
+
+## Future Pricing Options
+
+The pricing model is intentionally simple for v1. Planned extensions include:
+
+- automatic FX refresh on a schedule
+- markup rules such as `eBay price + 10%`
+- more flexible rounding profiles
+
+## Base Template Notes
+
+This project started from the Shopify React Router template.
 
 Rather than cloning this repo, follow the [Quick Start steps](https://github.com/Shopify/shopify-app-template-react-router#quick-start).
 

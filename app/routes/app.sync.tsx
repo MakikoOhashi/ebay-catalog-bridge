@@ -81,6 +81,12 @@ const textMap = {
     fieldStock: "在庫",
     fieldPrice: "価格",
     fixedFxRate: "固定為替レート",
+    fxRateMode: "為替レート方式",
+    fxModeFixed: "固定レート",
+    fxModeAuto: "自動取得（Frankfurter）",
+    fxModeHelp: "自動取得を選ぶと、USD から Shopifyストア通貨へのレートを取得します。",
+    autoFxLastRate: "前回取得レート",
+    autoFxLastFetchedAt: "前回取得日時",
     roundRule: "丸めルール",
     roundNearest: "四捨五入",
     roundUp: "切り上げ",
@@ -194,6 +200,12 @@ const textMap = {
     fieldStock: "Stock",
     fieldPrice: "Price",
     fixedFxRate: "Fixed FX Rate",
+    fxRateMode: "FX Rate Mode",
+    fxModeFixed: "Fixed Rate",
+    fxModeAuto: "Auto Fetch (Frankfurter)",
+    fxModeHelp: "Auto mode fetches the USD to Shopify store currency rate.",
+    autoFxLastRate: "Last fetched rate",
+    autoFxLastFetchedAt: "Last fetched at",
     roundRule: "Round Rule",
     roundNearest: "Nearest",
     roundUp: "Round Up",
@@ -306,7 +318,11 @@ type SettingsResponsePayload = {
     syncFrequencyMinutes: number;
     syncFields: string[];
     priceSyncEnabled: boolean;
+    fxRateMode: string;
     fixedFxRate: number;
+    autoFxLastRate?: number | null;
+    autoFxLastFetchedAt?: string | null;
+    autoFxLastTargetCurrency?: string | null;
     roundRule: string;
     errorNotifyEmail: string | null;
   };
@@ -661,7 +677,10 @@ export default function SyncConsolePage() {
             <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
               <div>{t.syncFrequency}: {currentSettings.syncFrequencyMinutes}</div>
               <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
+              <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
               <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
+              <div>{t.autoFxLastRate}: {currentSettings.autoFxLastRate ?? "-"}</div>
+              <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
               <div>{t.roundRule}: {currentSettings.roundRule}</div>
               <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
               <div>{t.errorNotifyEmail}: {currentSettings.errorNotifyEmail || "-"}</div>
@@ -698,6 +717,14 @@ export default function SyncConsolePage() {
                 ))}
               </div>
               <small>{t.syncFieldsHelp}</small>
+            </label>
+            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+              <span>{t.fxRateMode}</span>
+              <select name="fxRateMode" defaultValue={currentSettings?.fxRateMode ?? "fixed"}>
+                <option value="fixed">{t.fxModeFixed}</option>
+                <option value="auto">{t.fxModeAuto}</option>
+              </select>
+              <small>{t.fxModeHelp}</small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fixedFxRate}</span>

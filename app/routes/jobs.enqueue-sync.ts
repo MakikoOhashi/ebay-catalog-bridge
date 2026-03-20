@@ -637,6 +637,49 @@ async function getPrimaryLocationId(admin: ShopifyAdminClient): Promise<string |
   return ((first?.node as Record<string, unknown> | undefined)?.id as string | undefined) || null;
 }
 
+async function getShopCurrencyCode(admin: ShopifyAdminClient): Promise<string | null> {
+  const json = await graphqlJson(
+    admin,
+    `#graphql
+      query shopCurrency {
+        shop {
+          currencyCode
+        }
+      }`,
+  );
+
+  return (
+    ((json.data as Record<string, unknown> | undefined)?.shop as Record<string, unknown> | undefined)
+      ?.currencyCode as string | undefined
+  ) || null;
+}
+
+async function fetchFrankfurterRate(fromCurrency: string, toCurrency: string) {
+  const response = await fetchWithRetry(
+    `https://api.frankfurter.app/latest?from=${encodeURIComponent(fromCurrency)}&to=${encodeURIComponent(toCurrency)}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    },
+    3,
+  );
+
+  const json = (await response.json()) as {
+    amount?: number;
+    base?: string;
+    date?: string;
+    rates?: Record<string, number>;
+  };
+
+  if (!response.ok || !json.rates?.[toCurrency]) {
+    throw new Error(`Frankfurter rate fetch failed (${response.status}).`);
+  }
+
+  return json.rates[toCurrency];
+}
+
 async function getVariantInventoryRef(
   admin: ShopifyAdminClient,
   variantId: string,
@@ -1314,6 +1357,40 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
 
+  let activeFxRate = store.fixedFxRate;
+  if (shopifyAdmin && store.priceSyncEnabled && store.fxRateMode === "auto") {
+    try {
+      const targetCurrency = (await getShopCurrencyCode(shopifyAdmin)) || "JPY";
+      activeFxRate =
+        targetCurrency.toUpperCase() === "USD"
+          ? 1
+          : await fetchFrankfurterRate("USD", targetCurrency.toUpperCase());
+
+      await db.store.update({
+        where: { id: store.id },
+        data: {
+          autoFxLastRate: activeFxRate,
+          autoFxLastFetchedAt: new Date(),
+          autoFxLastTargetCurrency: targetCurrency.toUpperCase(),
+        },
+      });
+    } catch (error) {
+      counters.errorCount += 1;
+      await db.syncError.create({
+        data: {
+          runId: run.id,
+          storeId: store.id,
+          ebayAccountId: ebayAccount.id,
+          errorCode: "FX_RATE_FETCH_ERROR",
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch automatic FX rate.",
+        },
+      });
+    }
+  }
+
   for (const item of inputItems) {
     const sku = item.sku?.trim();
     const ebayItemId = item.itemId?.trim() || null;
@@ -1409,7 +1486,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           store.priceSyncEnabled && syncFieldSet.has("price")
             ? convertEbayPriceToShopify({
                 price: item.price ?? null,
-                fixedFxRate: store.fixedFxRate,
+                fixedFxRate: activeFxRate,
                 roundRule: store.roundRule,
               })
             : null,

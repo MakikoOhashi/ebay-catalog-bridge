@@ -6,6 +6,7 @@ type SettingsPayload = {
   syncFrequencyMinutes?: number;
   syncFields?: string[];
   priceSyncEnabled?: boolean;
+  fxRateMode?: string;
   fixedFxRate?: number;
   roundRule?: string;
   errorNotifyEmail?: string | null;
@@ -35,7 +36,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       syncFrequencyMinutes: store.syncFrequencyMinutes,
       syncFields: store.syncFields.split(",").filter(Boolean),
       priceSyncEnabled: store.priceSyncEnabled,
+      fxRateMode: store.fxRateMode,
       fixedFxRate: store.fixedFxRate,
+      autoFxLastRate: store.autoFxLastRate,
+      autoFxLastFetchedAt: store.autoFxLastFetchedAt,
+      autoFxLastTargetCurrency: store.autoFxLastTargetCurrency,
       roundRule: store.roundRule,
       errorNotifyEmail: store.errorNotifyEmail,
     },
@@ -69,6 +74,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         syncFrequencyMinutes: Number(form.get("syncFrequencyMinutes") || 30),
         syncFields,
         priceSyncEnabled: priceSyncEnabledValues.includes("true"),
+        fxRateMode: form.get("fxRateMode")?.toString() || "fixed",
         fixedFxRate: Number(form.get("fixedFxRate") || 150),
         roundRule: form.get("roundRule")?.toString() || "nearest",
         errorNotifyEmail: form.get("errorNotifyEmail")?.toString() || null,
@@ -90,6 +96,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         typeof body.priceSyncEnabled === "boolean"
           ? body.priceSyncEnabled
           : store.priceSyncEnabled,
+      fxRateMode:
+        body.fxRateMode === "auto" || body.fxRateMode === "fixed"
+          ? body.fxRateMode
+          : store.fxRateMode,
       fixedFxRate:
         body.fixedFxRate && body.fixedFxRate > 0 ? body.fixedFxRate : store.fixedFxRate,
       roundRule: body.roundRule?.trim() || store.roundRule,
@@ -103,7 +113,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       syncFrequencyMinutes: updated.syncFrequencyMinutes,
       syncFields: updated.syncFields.split(",").filter(Boolean),
       priceSyncEnabled: updated.priceSyncEnabled,
+      fxRateMode: updated.fxRateMode,
       fixedFxRate: updated.fixedFxRate,
+      autoFxLastRate: updated.autoFxLastRate,
+      autoFxLastFetchedAt: updated.autoFxLastFetchedAt,
+      autoFxLastTargetCurrency: updated.autoFxLastTargetCurrency,
       roundRule: updated.roundRule,
       errorNotifyEmail: updated.errorNotifyEmail,
     },
