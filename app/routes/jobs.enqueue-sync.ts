@@ -266,6 +266,36 @@ function normalizePrice(value?: number | null) {
   return value.toFixed(2);
 }
 
+function applyRoundRule(value: number, roundRule?: string | null) {
+  const normalizedRule = roundRule?.trim().toLowerCase() || "nearest";
+  if (normalizedRule === "up" || normalizedRule === "ceil" || normalizedRule === "ceiling") {
+    return Math.ceil(value);
+  }
+  if (normalizedRule === "down" || normalizedRule === "floor") {
+    return Math.floor(value);
+  }
+  return Math.round(value);
+}
+
+function convertEbayPriceToShopify(input: {
+  price?: number | null;
+  fixedFxRate?: number | null;
+  roundRule?: string | null;
+}) {
+  if (typeof input.price !== "number" || !Number.isFinite(input.price) || input.price < 0) {
+    return null;
+  }
+
+  const fxRate =
+    typeof input.fixedFxRate === "number" && Number.isFinite(input.fixedFxRate) && input.fixedFxRate > 0
+      ? input.fixedFxRate
+      : 1;
+
+  const converted = input.price * fxRate;
+  const rounded = applyRoundRule(converted, input.roundRule);
+  return rounded >= 0 ? rounded : null;
+}
+
 async function upsertShopifyProductBySku(input: {
   admin: ShopifyAdminClient;
   sku: string;
@@ -1360,7 +1390,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         sku,
         title: item.title,
         description: item.description,
-        price: store.priceSyncEnabled && syncFieldSet.has("price") ? item.price ?? null : null,
+        price:
+          store.priceSyncEnabled && syncFieldSet.has("price")
+            ? convertEbayPriceToShopify({
+                price: item.price ?? null,
+                fixedFxRate: store.fixedFxRate,
+                roundRule: store.roundRule,
+              })
+            : null,
         knownVariantId: existing?.shopifyVariantId ?? null,
         knownProductId: existing?.shopifyProductId ?? null,
       });
