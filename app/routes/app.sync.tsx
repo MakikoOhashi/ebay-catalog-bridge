@@ -18,10 +18,17 @@ type Lang = "ja" | "en";
 const textMap = {
   ja: {
     pageHeading: "同期コンソール",
-    quickActions: "クイック操作",
-    quickActionsDesc: "全体データの再読み込みや初期接続を行います。",
+    quickActions: "画面更新",
+    quickActionsDesc: "通常は下のセクションだけ見れば操作できます。困ったときだけ再読み込みしてください。",
+    gettingStarted: "使い方",
+    gettingStartedDesc: "この画面は 1. eBay接続 → 2. 設定保存 → 3. 同期実行 → 4. 結果確認 の順で使います。",
+    step1: "1. eBayアカウントを接続する",
+    step2: "2. 必要なら設定を保存する",
+    step3: "3. 同期するアカウントを選んで同期する",
+    step4: "4. 最新実行サマリーと商品一覧で結果を見る",
     connectEbay: "eBayアカウント接続",
     accountConnections: "eBayアカウント接続（最大4）",
+    accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。",
     slot: "スロット",
     connect: "接続",
     disconnect: "解除",
@@ -45,14 +52,16 @@ const textMap = {
     missing: "欠損",
     errors: "エラー",
     runSync: "同期実行",
-    runSyncDesc: "手動で同期ジョブを実行します。通常運用はcronで自動実行されます。",
-    itemsJson: "Items JSON（任意）",
+    runSyncDesc: "普段はここだけ使えば大丈夫です。通常運用はcronで自動実行されますが、確認したいときはここから手動で実行できます。",
+    itemsJson: "テスト用 Items JSON（任意）",
+    itemsJsonHelp: "通常のeBay同期では空欄のままでOKです。手入力テストをしたいときだけ使います。",
     forceFullScan: "フルスキャン完了として扱う（missing_on_ebay適用）",
-    enqueueSync: "同期ジョブ投入",
+    forceFullScanHelp: "eBayで見つからなかったSKUを missing_on_ebay として扱いたいときだけ使います。通常はOFFのままでOKです。",
+    enqueueSync: "この内容で同期する",
     retryLatest: "最新Runを再試行",
     sendTestAlert: "テスト通知送信",
     settings: "設定",
-    settingsDesc: "同期頻度・対象項目・価格設定などを保存します。",
+    settingsDesc: "普段はここで価格同期ON/OFFや為替レートを保存します。保存した内容は下の『現在の保存設定』に出ます。",
     syncFrequency: "同期頻度（分）",
     syncFields: "同期フィールド（カンマ区切り）",
     fixedFxRate: "固定為替レート",
@@ -61,21 +70,23 @@ const textMap = {
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
     resolveConflict: "競合解消",
-    resolveConflictDesc: "SKU競合を手動で解消して再開できる状態にします。",
+    resolveConflictDesc: "同じSKUが複数eBayアカウントにあるときだけ使います。普段は触らなくて大丈夫です。",
     conflictId: "競合ID",
     note: "メモ",
     resolve: "解消する",
     syncErrors: "同期エラー",
-    syncErrorsDesc: "run単位でエラーを絞り込み確認します。",
+    syncErrorsDesc: "同期が失敗したときだけ使います。普段は見る必要はありません。",
     limit: "件数",
     runIdOptional: "Run ID（任意）",
     errorCodeOptional: "エラーコード（任意）",
     loadErrors: "エラーを読み込む",
     runHistory: "実行履歴",
-    runHistoryDesc: "過去runの推移を時系列で確認します。",
+    runHistoryDesc: "最近の同期が成功しているか、失敗していないかを確認する一覧です。",
     run: "Run",
     status: "状態",
     mode: "モード",
+    debugData: "デバッグ情報",
+    debugDataDesc: "開発・調査用の生データです。普段は開かなくて大丈夫です。",
     syncStatusJson: "同期ステータスJSON",
     syncStatusJsonDesc: "状態APIの生データです（デバッグ向け）。",
     settingsJson: "設定JSON",
@@ -101,10 +112,17 @@ const textMap = {
   },
   en: {
     pageHeading: "Sync Console",
-    quickActions: "Quick Actions",
-    quickActionsDesc: "Refresh overall data and perform initial connection actions.",
+    quickActions: "Refresh",
+    quickActionsDesc: "In normal use, the sections below are enough. Use refresh only when the screen looks stale.",
+    gettingStarted: "How To Use",
+    gettingStartedDesc: "Use this screen in order: 1. Connect eBay, 2. Save settings, 3. Run sync, 4. Check results.",
+    step1: "1. Connect your eBay account",
+    step2: "2. Save settings if needed",
+    step3: "3. Pick the account and run sync",
+    step4: "4. Check the latest summary and product result",
     connectEbay: "Connect eBay Account",
     accountConnections: "eBay Account Connections (max 4)",
+    accountConnectionsDesc: "Manage which eBay accounts are linked to this Shopify store. In normal use, only connect accounts that actually own products.",
     slot: "Slot",
     connect: "Connect",
     disconnect: "Disconnect",
@@ -128,14 +146,16 @@ const textMap = {
     missing: "Missing",
     errors: "Errors",
     runSync: "Run Sync",
-    runSyncDesc: "Run sync manually. In normal operation, cron runs this automatically.",
-    itemsJson: "Items JSON (optional)",
+    runSyncDesc: "This is the main area you will use. Cron handles normal operation, but you can run sync manually here when checking changes.",
+    itemsJson: "Test Items JSON (optional)",
+    itemsJsonHelp: "Leave this blank for normal eBay sync. Use it only when you want to test with manual input.",
     forceFullScan: "Force full scan complete (apply missing_on_ebay)",
-    enqueueSync: "Enqueue Core Sync",
+    forceFullScanHelp: "Use this only when you want missing eBay SKUs to be marked as missing_on_ebay. Normally leave it off.",
+    enqueueSync: "Run Sync Now",
     retryLatest: "Retry Latest Run",
     sendTestAlert: "Send Test Alert",
     settings: "Settings",
-    settingsDesc: "Save sync frequency, fields, and pricing options.",
+    settingsDesc: "Save pricing and sync options here. The saved result appears in 'Currently saved settings' below.",
     syncFrequency: "Sync Frequency (minutes)",
     syncFields: "Sync Fields (comma separated)",
     fixedFxRate: "Fixed FX Rate",
@@ -144,21 +164,23 @@ const textMap = {
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
     resolveConflict: "Resolve Conflict",
-    resolveConflictDesc: "Resolve SKU conflicts manually so syncing can continue.",
+    resolveConflictDesc: "Use this only when the same SKU exists in multiple eBay accounts. Most users can ignore it.",
     conflictId: "Conflict ID",
     note: "Note",
     resolve: "Resolve Conflict",
     syncErrors: "Sync Errors",
-    syncErrorsDesc: "Filter and inspect sync errors by run.",
+    syncErrorsDesc: "Use this only when a sync fails. You usually do not need it during normal use.",
     limit: "Limit",
     runIdOptional: "Run ID (optional)",
     errorCodeOptional: "Error Code (optional)",
     loadErrors: "Load Errors",
     runHistory: "Run History",
-    runHistoryDesc: "View historical run trends in chronological order.",
+    runHistoryDesc: "A quick way to see whether recent syncs are succeeding or failing.",
     run: "Run",
     status: "Status",
     mode: "Mode",
+    debugData: "Debug Data",
+    debugDataDesc: "Raw developer-facing data. You usually do not need to open this.",
     syncStatusJson: "Sync Status JSON",
     syncStatusJsonDesc: "Raw status API response (for debugging).",
     settingsJson: "Settings JSON",
@@ -340,22 +362,44 @@ export default function SyncConsolePage() {
   const accountSlots = ["primary", "account-2", "account-3", "account-4"];
 
   const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
+  const refreshAll = () => {
+    statusFetcher.load("/api/sync/status");
+    runsFetcher.load("/api/sync/runs?limit=20");
+    settingsFetcher.load("/api/settings");
+    conflictsFetcher.load("/api/conflicts");
+  };
+  const activeConnectedCount = checkpoints.filter((checkpoint) => checkpoint.status === "connected").length;
 
   return (
     <s-page heading={t.pageHeading}>
+      <s-section heading={t.gettingStarted}>
+        <s-paragraph>{t.gettingStartedDesc}</s-paragraph>
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          <div style={{ display: "grid", gap: 8 }}>
+            <div>{t.step1}</div>
+            <div>{t.step2}</div>
+            <div>{t.step3}</div>
+            <div>{t.step4}</div>
+          </div>
+        </s-box>
+      </s-section>
+
       <s-section heading={t.quickActions}>
         <s-paragraph>{t.quickActionsDesc}</s-paragraph>
         <s-stack direction="inline" gap="base">
           <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
           <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
-          <s-button onClick={() => statusFetcher.load("/api/sync/status")} {...(statusFetcher.state !== "idle" ? { loading: true } : {})}>{t.refreshStatus}</s-button>
-          <s-button onClick={() => runsFetcher.load("/api/sync/runs?limit=20")} {...(runsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadRunHistory}</s-button>
-          <s-button onClick={() => settingsFetcher.load("/api/settings")} {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadSettings}</s-button>
-          <s-button onClick={() => conflictsFetcher.load("/api/conflicts")} {...(conflictsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadConflicts}</s-button>
+          <s-button onClick={refreshAll} {...(statusFetcher.state !== "idle" || runsFetcher.state !== "idle" || settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.refreshStatus}</s-button>
         </s-stack>
       </s-section>
 
       <s-section heading={t.accountConnections}>
+        <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          {lang === "ja"
+            ? `現在の接続数: ${activeConnectedCount} / 4`
+            : `Connected now: ${activeConnectedCount} / 4`}
+        </s-box>
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
           {accountSlots.map((slotLabel, index) => {
             const checkpoint = checkpointByLabel.get(slotLabel);
@@ -438,11 +482,13 @@ export default function SyncConsolePage() {
               defaultValue={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"},\n  {"sku":"SKU-002","itemId":"ITEM-002","lastModified":"2026-03-05T00:05:00Z"}\n]`}
               style={{ minWidth: 420 }}
             />
+            <small>{t.itemsJsonHelp}</small>
           </label>
           <label style={{ display: "inline-flex", gap: 8 }}>
             <input type="checkbox" name="fullScanComplete" value="true" />
             <span>{t.forceFullScan}</span>
           </label>
+          <small>{t.forceFullScanHelp}</small>
           <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
         </enqueueFetcher.Form>
         <retryFetcher.Form method="post" action="/api/sync/retry">
@@ -611,41 +657,40 @@ export default function SyncConsolePage() {
         </s-box>
       </s-section>
 
-      <s-section heading={t.syncStatusJson}>
-        <s-paragraph>{t.syncStatusJsonDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{statusJson}</pre>
-        </s-box>
-      </s-section>
-
-      <s-section heading={t.settingsJson}>
-        <s-paragraph>{t.settingsJsonDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{settingsJson}</pre>
-        </s-box>
-      </s-section>
-
-      <s-section heading={t.conflictsJson}>
-        <s-paragraph>{t.conflictsJsonDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{conflictsJson}</pre>
-        </s-box>
-      </s-section>
-
-      <s-section heading={t.syncErrorsJson}>
-        <s-paragraph>{t.syncErrorsJsonDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{errorsJson}</pre>
-        </s-box>
-      </s-section>
-
-      <s-section heading={t.actionsJson}>
-        <s-paragraph>{t.actionsJsonDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-            {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
-          </pre>
-        </s-box>
+      <s-section heading={t.debugData}>
+        <s-paragraph>{t.debugDataDesc}</s-paragraph>
+        <details>
+          <summary>{t.syncStatusJson}</summary>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{statusJson}</pre>
+          </s-box>
+        </details>
+        <details>
+          <summary>{t.settingsJson}</summary>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{settingsJson}</pre>
+          </s-box>
+        </details>
+        <details>
+          <summary>{t.conflictsJson}</summary>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{conflictsJson}</pre>
+          </s-box>
+        </details>
+        <details>
+          <summary>{t.syncErrorsJson}</summary>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{errorsJson}</pre>
+          </s-box>
+        </details>
+        <details>
+          <summary>{t.actionsJson}</summary>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+              {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
+            </pre>
+          </s-box>
+        </details>
       </s-section>
     </s-page>
   );
