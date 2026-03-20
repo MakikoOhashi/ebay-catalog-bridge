@@ -62,10 +62,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .getAll("priceSyncEnabled")
         .map((value) => value.toString());
       const syncFields = form
-        .get("syncFields")
-        ?.toString()
-        .split(",")
-        .map((v) => v.trim())
+        .getAll("syncFields")
+        .map((value) => value.toString().trim())
         .filter(Boolean);
       body = {
         syncFrequencyMinutes: Number(form.get("syncFrequencyMinutes") || 30),

@@ -72,7 +72,14 @@ const textMap = {
     settings: "設定",
     settingsDesc: "普段はここで価格同期ON/OFFや為替レートを保存します。保存した内容は下の『現在の保存設定』に出ます。",
     syncFrequency: "同期頻度（分）",
-    syncFields: "同期フィールド（カンマ区切り）",
+    syncFields: "同期フィールド",
+    syncFieldsHelp: "同期したい項目だけチェックしてください。",
+    fieldTitle: "商品名",
+    fieldDescription: "説明文",
+    fieldImages: "画像",
+    fieldWeight: "重量",
+    fieldStock: "在庫",
+    fieldPrice: "価格",
     fixedFxRate: "固定為替レート",
     roundRule: "丸めルール",
     roundNearest: "四捨五入",
@@ -179,7 +186,14 @@ const textMap = {
     settings: "Settings",
     settingsDesc: "Save pricing and sync options here. The saved result appears in 'Currently saved settings' below.",
     syncFrequency: "Sync Frequency (minutes)",
-    syncFields: "Sync Fields (comma separated)",
+    syncFields: "Sync Fields",
+    syncFieldsHelp: "Check only the fields you want to sync.",
+    fieldTitle: "Title",
+    fieldDescription: "Description",
+    fieldImages: "Images",
+    fieldWeight: "Weight",
+    fieldStock: "Stock",
+    fieldPrice: "Price",
     fixedFxRate: "Fixed FX Rate",
     roundRule: "Round Rule",
     roundNearest: "Nearest",
@@ -321,6 +335,15 @@ function serializeTestItems(items: TestItemDraft[]) {
 
   return normalized.length > 0 ? JSON.stringify(normalized, null, 2) : "";
 }
+
+const syncFieldOptions = [
+  { value: "title", labelKey: "fieldTitle" },
+  { value: "description", labelKey: "fieldDescription" },
+  { value: "images", labelKey: "fieldImages" },
+  { value: "weight", labelKey: "fieldWeight" },
+  { value: "stock", labelKey: "fieldStock" },
+  { value: "price", labelKey: "fieldPrice" },
+] as const;
 
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
@@ -660,14 +683,23 @@ export default function SyncConsolePage() {
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFields}</span>
-              <input
-                type="text"
-                name="syncFields"
-                defaultValue={
-                  currentSettings?.syncFields?.join(",") ||
-                  "title,description,images,weight,stock,price"
-                }
-              />
+              <div style={{ display: "grid", gap: 6 }}>
+                {syncFieldOptions.map((option) => (
+                  <label key={option.value} style={{ display: "inline-flex", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      name="syncFields"
+                      value={option.value}
+                      defaultChecked={
+                        currentSettings?.syncFields?.includes(option.value) ??
+                        true
+                      }
+                    />
+                    <span>{t[option.labelKey]}</span>
+                  </label>
+                ))}
+              </div>
+              <small>{t.syncFieldsHelp}</small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fixedFxRate}</span>
