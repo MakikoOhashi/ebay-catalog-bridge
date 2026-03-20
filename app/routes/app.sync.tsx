@@ -53,8 +53,17 @@ const textMap = {
     errors: "エラー",
     runSync: "同期実行",
     runSyncDesc: "普段はここだけ使えば大丈夫です。通常運用はcronで自動実行されますが、確認したいときはここから手動で実行できます。",
-    itemsJson: "テスト用 Items JSON（任意）",
-    itemsJsonHelp: "通常のeBay同期では空欄のままでOKです。手入力テストをしたいときだけ使います。",
+    reflectTest: "反映テスト（任意）",
+    reflectTestDesc: "入力した商品をテスト用に追加して、反映される内容を確認できます。確認用の機能なので、本番データをそのまま登録するものではありません。",
+    reflectTestEmpty: "通常のeBay同期では、この入力は空欄のままでOKです。",
+    testItem: "テスト商品",
+    sku: "SKU",
+    itemId: "Item ID",
+    lastModified: "更新日時",
+    addTestItem: "テスト商品を追加",
+    removeTestItem: "この商品を削除",
+    advancedJson: "高度な入力（JSONを直接編集）",
+    advancedJsonDesc: "通常は使いません。必要なときだけJSONを直接入力できます。",
     forceFullScan: "フルスキャン完了として扱う（missing_on_ebay適用）",
     forceFullScanHelp: "eBayで見つからなかったSKUを missing_on_ebay として扱いたいときだけ使います。通常はOFFのままでOKです。",
     enqueueSync: "この内容で同期する",
@@ -147,8 +156,17 @@ const textMap = {
     errors: "Errors",
     runSync: "Run Sync",
     runSyncDesc: "This is the main area you will use. Cron handles normal operation, but you can run sync manually here when checking changes.",
-    itemsJson: "Test Items JSON (optional)",
-    itemsJsonHelp: "Leave this blank for normal eBay sync. Use it only when you want to test with manual input.",
+    reflectTest: "Reflection Test (optional)",
+    reflectTestDesc: "You can add test products here to preview how they would sync. This is for testing only and does not directly register production data.",
+    reflectTestEmpty: "For normal eBay sync, leave this section empty.",
+    testItem: "Test Item",
+    sku: "SKU",
+    itemId: "Item ID",
+    lastModified: "Last Modified",
+    addTestItem: "Add Test Item",
+    removeTestItem: "Remove This Item",
+    advancedJson: "Advanced Input (edit JSON directly)",
+    advancedJsonDesc: "You usually do not need this. Use only when you want to enter raw JSON manually.",
     forceFullScan: "Force full scan complete (apply missing_on_ebay)",
     forceFullScanHelp: "Use this only when you want missing eBay SKUs to be marked as missing_on_ebay. Normally leave it off.",
     enqueueSync: "Run Sync Now",
@@ -274,9 +292,33 @@ type SettingsResponsePayload = {
   };
 };
 
+type TestItemDraft = {
+  sku: string;
+  itemId: string;
+  lastModified: string;
+};
+
+function createEmptyTestItem(): TestItemDraft {
+  return { sku: "", itemId: "", lastModified: "" };
+}
+
+function serializeTestItems(items: TestItemDraft[]) {
+  const normalized = items
+    .map((item) => ({
+      sku: item.sku.trim(),
+      itemId: item.itemId.trim(),
+      lastModified: item.lastModified.trim(),
+    }))
+    .filter((item) => item.sku || item.itemId || item.lastModified);
+
+  return normalized.length > 0 ? JSON.stringify(normalized, null, 2) : "";
+}
+
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
   const [lang, setLang] = useState<Lang>("ja");
+  const [testItems, setTestItems] = useState<TestItemDraft[]>([createEmptyTestItem()]);
+  const [advancedItemsJson, setAdvancedItemsJson] = useState("");
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("syncConsoleLang") : null;
@@ -369,6 +411,10 @@ export default function SyncConsolePage() {
     conflictsFetcher.load("/api/conflicts");
   };
   const activeConnectedCount = checkpoints.filter((checkpoint) => checkpoint.status === "connected").length;
+  const serializedTestItems = useMemo(() => {
+    const advanced = advancedItemsJson.trim();
+    return advanced || serializeTestItems(testItems);
+  }, [advancedItemsJson, testItems]);
 
   return (
     <s-page heading={t.pageHeading}>
@@ -463,6 +509,7 @@ export default function SyncConsolePage() {
           <input type="hidden" name="shop" value={shop} />
           <input type="hidden" name="mode" value="rolling" />
           <input type="hidden" name="fullScanComplete" value="false" />
+          <input type="hidden" name="itemsJson" value={serializedTestItems} />
           <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
             <span>{t.syncAccount}</span>
             <select name="ebayAccountId" defaultValue="">
@@ -474,16 +521,89 @@ export default function SyncConsolePage() {
               ))}
             </select>
           </label>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span>{t.itemsJson}</span>
-            <textarea
-              name="itemsJson"
-              rows={8}
-              defaultValue={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"},\n  {"sku":"SKU-002","itemId":"ITEM-002","lastModified":"2026-03-05T00:05:00Z"}\n]`}
-              style={{ minWidth: 420 }}
-            />
-            <small>{t.itemsJsonHelp}</small>
-          </label>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <s-stack direction="block" gap="base">
+              <strong>{t.reflectTest}</strong>
+              <s-paragraph>{t.reflectTestDesc}</s-paragraph>
+              <small>{t.reflectTestEmpty}</small>
+              {testItems.map((item, index) => (
+                <div
+                  key={`test-item-${index}`}
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    padding: 12,
+                    border: "1px solid var(--s-color-border-default)",
+                    borderRadius: 8,
+                    maxWidth: 520,
+                  }}
+                >
+                  <strong>{t.testItem} {index + 1}</strong>
+                  <label style={{ display: "grid", gap: 4 }}>
+                    <span>{t.sku}</span>
+                    <input
+                      type="text"
+                      value={item.sku}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], sku: event.target.value };
+                        setTestItems(next);
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: 4 }}>
+                    <span>{t.itemId}</span>
+                    <input
+                      type="text"
+                      value={item.itemId}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], itemId: event.target.value };
+                        setTestItems(next);
+                      }}
+                    />
+                  </label>
+                  <label style={{ display: "grid", gap: 4 }}>
+                    <span>{t.lastModified}</span>
+                    <input
+                      type="text"
+                      placeholder="2026-03-05T00:00:00Z"
+                      value={item.lastModified}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], lastModified: event.target.value };
+                        setTestItems(next);
+                      }}
+                    />
+                  </label>
+                  {testItems.length > 1 ? (
+                    <s-button
+                      variant="secondary"
+                      onClick={() => setTestItems(testItems.filter((_, itemIndex) => itemIndex !== index))}
+                    >
+                      {t.removeTestItem}
+                    </s-button>
+                  ) : null}
+                </div>
+              ))}
+              <s-button variant="secondary" onClick={() => setTestItems([...testItems, createEmptyTestItem()])}>
+                {t.addTestItem}
+              </s-button>
+              <details>
+                <summary>{t.advancedJson}</summary>
+                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                  <small>{t.advancedJsonDesc}</small>
+                  <textarea
+                    rows={8}
+                    value={advancedItemsJson}
+                    onChange={(event) => setAdvancedItemsJson(event.target.value)}
+                    style={{ minWidth: 420 }}
+                    placeholder={`[\n  {"sku":"SKU-001","itemId":"ITEM-001","lastModified":"2026-03-05T00:00:00Z"}\n]`}
+                  />
+                </div>
+              </details>
+            </s-stack>
+          </s-box>
           <label style={{ display: "inline-flex", gap: 8 }}>
             <input type="checkbox" name="fullScanComplete" value="true" />
             <span>{t.forceFullScan}</span>
