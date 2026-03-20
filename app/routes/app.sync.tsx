@@ -400,6 +400,7 @@ export default function SyncConsolePage() {
   const latestRun = statusFetcher.data?.latestRun || null;
   const runs = runsFetcher.data?.runs || [];
   const checkpoints = statusFetcher.data?.checkpoints || [];
+  const connectedCheckpoints = checkpoints.filter((checkpoint) => checkpoint.status === "connected");
   const currentSettings = settingsFetcher.data?.settings || null;
   const accountSlots = ["primary", "account-2", "account-3", "account-4"];
 
@@ -410,7 +411,7 @@ export default function SyncConsolePage() {
     settingsFetcher.load("/api/settings");
     conflictsFetcher.load("/api/conflicts");
   };
-  const activeConnectedCount = checkpoints.filter((checkpoint) => checkpoint.status === "connected").length;
+  const activeConnectedCount = connectedCheckpoints.length;
   const serializedTestItems = useMemo(() => {
     const advanced = advancedItemsJson.trim();
     return advanced || serializeTestItems(testItems);
@@ -514,7 +515,7 @@ export default function SyncConsolePage() {
             <span>{t.syncAccount}</span>
             <select name="ebayAccountId" defaultValue="">
               <option value="">{t.autoFirstConnected}</option>
-              {checkpoints.map((checkpoint) => (
+              {connectedCheckpoints.map((checkpoint) => (
                 <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
                   #{checkpoint.ebayAccountId} ({checkpoint.label}) - {checkpoint.status}
                 </option>
