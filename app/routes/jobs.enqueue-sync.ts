@@ -851,6 +851,16 @@ function extractTagBlocks(block: string, tag: string) {
   );
 }
 
+function uniqueUrls(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+}
+
 function parseTradingItems(xml: string): EbayTradingPage {
   const ack = extractTagValue(xml, "Ack");
   const errors = extractTagBlocks(xml, "Errors").map((errorBlock) => {
@@ -874,7 +884,12 @@ function parseTradingItems(xml: string): EbayTradingPage {
       extractTagValue(priceBlock, "CurrentPrice") || extractTagValue(itemBlock, "StartPrice");
     const price = currentPriceRaw ? Number(currentPriceRaw) : undefined;
     const pictureDetails = extractTagValue(itemBlock, "PictureDetails") || "";
-    const pictureUrls = extractTagBlocks(pictureDetails, "PictureURL").map((value) => decodeXml(value.trim()));
+    const pictureUrls = uniqueUrls([
+      ...extractTagBlocks(pictureDetails, "PictureURL").map((value) => decodeXml(value.trim())),
+      extractTagValue(itemBlock, "GalleryURL"),
+      extractTagValue(itemBlock, "GalleryPlusPictureURL"),
+      ...extractTagBlocks(itemBlock, "PictureURL").map((value) => decodeXml(value.trim())),
+    ]);
 
     const variationBlocks = extractTagBlocks(itemBlock, "Variation");
     if (variationBlocks.length > 0) {
