@@ -98,7 +98,6 @@ const textMap = {
     syncErrorsDesc: "同期が失敗したときだけ使います。普段は見る必要はありません。",
     limit: "件数",
     runIdOptional: "Run ID（任意）",
-    errorCodeOptional: "エラーコード（任意）",
     loadErrors: "エラーを読み込む",
     runHistory: "実行履歴",
     runHistoryDesc: "最近の同期が成功しているか、失敗していないかを確認する一覧です。",
@@ -212,7 +211,6 @@ const textMap = {
     syncErrorsDesc: "Use this only when a sync fails. You usually do not need it during normal use.",
     limit: "Limit",
     runIdOptional: "Run ID (optional)",
-    errorCodeOptional: "Error Code (optional)",
     loadErrors: "Load Errors",
     runHistory: "Run History",
     runHistoryDesc: "A quick way to see whether recent syncs are succeeding or failing.",
@@ -772,10 +770,6 @@ export default function SyncConsolePage() {
             <label style={{ display: "grid", gap: 4 }}>
               <span>{t.runIdOptional}</span>
               <input type="number" name="runId" placeholder="latest" />
-            </label>
-            <label style={{ display: "grid", gap: 4 }}>
-              <span>{t.errorCodeOptional}</span>
-              <input type="text" name="errorCode" placeholder="EBAY_FETCH_ERROR" />
             </label>
             <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadErrors}</s-button>
           </s-stack>
