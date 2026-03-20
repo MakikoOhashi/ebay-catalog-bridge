@@ -419,6 +419,11 @@ export default function SyncConsolePage() {
 
   return (
     <s-page heading={t.pageHeading}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+        <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
+        <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
+      </div>
+
       <s-section heading={t.gettingStarted}>
         <s-paragraph>{t.gettingStartedDesc}</s-paragraph>
         <s-box padding="base" borderWidth="base" borderRadius="base">
@@ -429,14 +434,6 @@ export default function SyncConsolePage() {
             <div>{t.step4}</div>
           </div>
         </s-box>
-      </s-section>
-
-      <s-section heading={t.quickActions}>
-        <s-paragraph>{t.quickActionsDesc}</s-paragraph>
-        <s-stack direction="inline" gap="base">
-          <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
-          <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
-        </s-stack>
       </s-section>
 
       <s-section heading={t.accountConnections}>
