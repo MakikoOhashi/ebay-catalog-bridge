@@ -240,6 +240,18 @@ type SyncRunsPayload = {
   }>;
 };
 
+type SettingsResponsePayload = {
+  shop: string;
+  settings: {
+    syncFrequencyMinutes: number;
+    syncFields: string[];
+    priceSyncEnabled: boolean;
+    fixedFxRate: number;
+    roundRule: string;
+    errorNotifyEmail: string | null;
+  };
+};
+
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
   const [lang, setLang] = useState<Lang>("ja");
@@ -262,7 +274,7 @@ export default function SyncConsolePage() {
 
   const statusFetcher = useFetcher<SyncStatusPayload>();
   const enqueueFetcher = useFetcher();
-  const settingsFetcher = useFetcher();
+  const settingsFetcher = useFetcher<SettingsResponsePayload>();
   const conflictsFetcher = useFetcher();
   const errorsFetcher = useFetcher();
   const resolveConflictFetcher = useFetcher();
@@ -274,15 +286,42 @@ export default function SyncConsolePage() {
   useEffect(() => {
     statusFetcher.load("/api/sync/status");
     runsFetcher.load("/api/sync/runs?limit=20");
+    settingsFetcher.load("/api/settings");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (disconnectFetcher.data && disconnectFetcher.state === "idle") {
       statusFetcher.load("/api/sync/status");
+      runsFetcher.load("/api/sync/runs?limit=20");
+      conflictsFetcher.load("/api/conflicts");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disconnectFetcher.data, disconnectFetcher.state]);
+
+  useEffect(() => {
+    if (enqueueFetcher.data && enqueueFetcher.state === "idle") {
+      statusFetcher.load("/api/sync/status");
+      runsFetcher.load("/api/sync/runs?limit=20");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enqueueFetcher.data, enqueueFetcher.state]);
+
+  useEffect(() => {
+    if (retryFetcher.data && retryFetcher.state === "idle") {
+      statusFetcher.load("/api/sync/status");
+      runsFetcher.load("/api/sync/runs?limit=20");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retryFetcher.data, retryFetcher.state]);
+
+  useEffect(() => {
+    if (resolveConflictFetcher.data && resolveConflictFetcher.state === "idle") {
+      conflictsFetcher.load("/api/conflicts");
+      statusFetcher.load("/api/sync/status");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolveConflictFetcher.data, resolveConflictFetcher.state]);
 
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const enqueueJson = useMemo(() => pretty(enqueueFetcher.data, t.noEnqueueRequested), [enqueueFetcher.data, t.noEnqueueRequested]);
@@ -297,6 +336,7 @@ export default function SyncConsolePage() {
   const latestRun = statusFetcher.data?.latestRun || null;
   const runs = runsFetcher.data?.runs || [];
   const checkpoints = statusFetcher.data?.checkpoints || [];
+  const currentSettings = settingsFetcher.data?.settings || null;
   const accountSlots = ["primary", "account-2", "account-3", "account-4"];
 
   const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
@@ -415,31 +455,75 @@ export default function SyncConsolePage() {
 
       <s-section heading={t.settings}>
         <s-paragraph>{t.settingsDesc}</s-paragraph>
+        {currentSettings ? (
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
+            <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+              <div>{t.syncFrequency}: {currentSettings.syncFrequencyMinutes}</div>
+              <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
+              <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
+              <div>{t.roundRule}: {currentSettings.roundRule}</div>
+              <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
+              <div>{t.errorNotifyEmail}: {currentSettings.errorNotifyEmail || "-"}</div>
+            </div>
+          </s-box>
+        ) : null}
         <settingsFetcher.Form method="post" action="/api/settings">
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFrequency}</span>
-              <input type="number" min={5} name="syncFrequencyMinutes" defaultValue={30} />
+              <input
+                type="number"
+                min={5}
+                name="syncFrequencyMinutes"
+                defaultValue={currentSettings?.syncFrequencyMinutes ?? 30}
+              />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFields}</span>
-              <input type="text" name="syncFields" defaultValue="title,description,images,weight,stock,price" />
+              <input
+                type="text"
+                name="syncFields"
+                defaultValue={
+                  currentSettings?.syncFields?.join(",") ||
+                  "title,description,images,weight,stock,price"
+                }
+              />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fixedFxRate}</span>
-              <input type="number" name="fixedFxRate" step="0.01" defaultValue={150} />
+              <input
+                type="number"
+                name="fixedFxRate"
+                step="0.01"
+                defaultValue={currentSettings?.fixedFxRate ?? 150}
+              />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.roundRule}</span>
-              <input type="text" name="roundRule" defaultValue="nearest" />
+              <input
+                type="text"
+                name="roundRule"
+                defaultValue={currentSettings?.roundRule ?? "nearest"}
+              />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.errorNotifyEmail}</span>
-              <input type="email" name="errorNotifyEmail" placeholder="ops@example.com" />
+              <input
+                type="email"
+                name="errorNotifyEmail"
+                placeholder="ops@example.com"
+                defaultValue={currentSettings?.errorNotifyEmail ?? ""}
+              />
             </label>
             <label style={{ display: "inline-flex", gap: 8 }}>
               <input type="hidden" name="priceSyncEnabled" value="false" />
-              <input type="checkbox" name="priceSyncEnabled" value="true" />
+              <input
+                type="checkbox"
+                name="priceSyncEnabled"
+                value="true"
+                defaultChecked={currentSettings?.priceSyncEnabled ?? false}
+              />
               <span>{t.enablePriceSync}</span>
             </label>
             <s-button type="submit" {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
