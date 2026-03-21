@@ -63,11 +63,14 @@ type EbayTradingItem = {
   sku?: string;
   itemId?: string;
   title?: string;
+  description?: string;
   quantity?: number;
   price?: number;
   lastModified?: string;
   imageUrls?: string[];
   variationKey?: string;
+  weightValue?: number;
+  weightUnit?: string;
 };
 
 type EbayTradingPage = {
@@ -284,8 +287,11 @@ function mapEbayWeightUnitToShopify(unit?: string | null) {
   const normalized = unit?.trim().toUpperCase();
   if (normalized === "GRAM" || normalized === "GRAMS") return "GRAMS";
   if (normalized === "KILOGRAM" || normalized === "KILOGRAMS") return "KILOGRAMS";
+  if (normalized === "KG" || normalized === "KGS") return "KILOGRAMS";
   if (normalized === "OUNCE" || normalized === "OUNCES") return "OUNCES";
+  if (normalized === "OZ" || normalized === "OZS") return "OUNCES";
   if (normalized === "POUND" || normalized === "POUNDS") return "POUNDS";
+  if (normalized === "LB" || normalized === "LBS") return "POUNDS";
   return null;
 }
 
@@ -1046,6 +1052,45 @@ function extractTagBlocks(block: string, tag: string) {
   );
 }
 
+function extractTagAttribute(block: string, tag: string, attribute: string) {
+  const match = block.match(
+    new RegExp(`<${tag}([^>]*)>`, "i"),
+  );
+  if (!match?.[1]) return null;
+  const attrMatch = match[1].match(
+    new RegExp(`${attribute}=["']([^"']+)["']`, "i"),
+  );
+  return attrMatch?.[1] ? decodeXml(attrMatch[1].trim()) : null;
+}
+
+function parseTradingWeight(block: string) {
+  const shippingBlock = extractTagValue(block, "ShippingPackageDetails") || block;
+  const weightMajorRaw = extractTagValue(shippingBlock, "WeightMajor");
+  const weightMinorRaw = extractTagValue(shippingBlock, "WeightMinor");
+  const majorUnit = extractTagAttribute(shippingBlock, "WeightMajor", "unit");
+  const minorUnit = extractTagAttribute(shippingBlock, "WeightMinor", "unit");
+
+  const major = weightMajorRaw != null ? Number(weightMajorRaw) : null;
+  const minor = weightMinorRaw != null ? Number(weightMinorRaw) : null;
+  const normalizedMajorUnit = mapEbayWeightUnitToShopify(majorUnit);
+  const normalizedMinorUnit = mapEbayWeightUnitToShopify(minorUnit);
+
+  if (normalizedMajorUnit === "POUNDS") {
+    const pounds = (Number.isFinite(major) ? Number(major) : 0) + ((normalizedMinorUnit === "OUNCES" && Number.isFinite(minor)) ? Number(minor) / 16 : 0);
+    return pounds > 0 ? { weightValue: pounds, weightUnit: "POUNDS" } : null;
+  }
+
+  if (normalizedMajorUnit && Number.isFinite(major)) {
+    return { weightValue: Number(major), weightUnit: normalizedMajorUnit };
+  }
+
+  if (normalizedMinorUnit && Number.isFinite(minor)) {
+    return { weightValue: Number(minor), weightUnit: normalizedMinorUnit };
+  }
+
+  return null;
+}
+
 function uniqueUrls(values: Array<string | null | undefined>) {
   return Array.from(
     new Set(
@@ -1087,6 +1132,7 @@ function parseTradingItems(xml: string): EbayTradingPage {
   for (const itemBlock of itemBlocks) {
     const itemId = extractTagValue(itemBlock, "ItemID") || undefined;
     const title = extractTagValue(itemBlock, "Title") || undefined;
+    const description = extractTagValue(itemBlock, "Description") || undefined;
     const quantityRaw = extractTagValue(itemBlock, "Quantity");
     const quantity = quantityRaw ? Number(quantityRaw) : undefined;
     const priceBlock = extractTagValue(itemBlock, "SellingStatus") || itemBlock;
@@ -1094,6 +1140,7 @@ function parseTradingItems(xml: string): EbayTradingPage {
       extractTagValue(priceBlock, "CurrentPrice") || extractTagValue(itemBlock, "StartPrice");
     const price = currentPriceRaw ? Number(currentPriceRaw) : undefined;
     const pictureDetails = extractTagValue(itemBlock, "PictureDetails") || "";
+    const weight = parseTradingWeight(itemBlock);
     const pictureUrls = uniqueUrls([
       ...extractTagBlocks(pictureDetails, "PictureURL").map((value) => decodeXml(value.trim())),
       extractTagValue(itemBlock, "GalleryURL"),
@@ -1112,10 +1159,13 @@ function parseTradingItems(xml: string): EbayTradingPage {
           sku: variationSku,
           itemId,
           title,
+          description,
           quantity: variationQuantity,
           price,
           imageUrls: pictureUrls,
           variationKey: variationSku,
+          weightValue: weight?.weightValue,
+          weightUnit: weight?.weightUnit,
         });
       }
       continue;
@@ -1128,9 +1178,12 @@ function parseTradingItems(xml: string): EbayTradingPage {
       sku,
       itemId,
       title,
+      description,
       quantity,
       price,
       imageUrls: pictureUrls,
+      weightValue: weight?.weightValue,
+      weightUnit: weight?.weightUnit,
     });
   }
 
@@ -1251,6 +1304,61 @@ async function fetchTradingActiveListings(input: {
   }
 
   return parseTradingItems(text);
+}
+
+async function fetchTradingItemDetails(input: {
+  accessToken: string;
+  itemId: string;
+}) {
+  const response = await fetchWithRetry(
+    `${getEbayApiBaseUrl()}/ws/api.dll`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/xml",
+        "X-EBAY-API-CALL-NAME": "GetItem",
+        "X-EBAY-API-COMPATIBILITY-LEVEL": "1231",
+        "X-EBAY-API-SITEID": "0",
+        "X-EBAY-API-IAF-TOKEN": input.accessToken,
+      },
+      body: `<?xml version="1.0" encoding="utf-8"?>
+<GetItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">
+  <ItemID>${input.itemId}</ItemID>
+  <DetailLevel>ReturnAll</DetailLevel>
+  <IncludeItemSpecifics>true</IncludeItemSpecifics>
+  <IncludeWatchCount>false</IncludeWatchCount>
+  <OutputSelector>Item.Description</OutputSelector>
+  <OutputSelector>Item.ShippingPackageDetails</OutputSelector>
+</GetItemRequest>`,
+    },
+    3,
+  );
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`eBay GetItem failed (${response.status}): ${text}`);
+  }
+
+  const ack = extractTagValue(text, "Ack");
+  if (ack && ack !== "Success" && ack !== "Warning") {
+    const errors = extractTagBlocks(text, "Errors").map((errorBlock) => {
+      const shortMessage = extractTagValue(errorBlock, "ShortMessage");
+      const longMessage = extractTagValue(errorBlock, "LongMessage");
+      const errorCode = extractTagValue(errorBlock, "ErrorCode");
+      return [errorCode, shortMessage, longMessage].filter(Boolean).join(": ");
+    });
+    throw new Error(`eBay GetItem Ack=${ack}: ${errors.join(" | ") || "No error details."}`);
+  }
+
+  const itemBlock = extractTagValue(text, "Item") || "";
+  const description = extractTagValue(itemBlock, "Description") || undefined;
+  const weight = parseTradingWeight(itemBlock);
+
+  return {
+    description,
+    weightValue: weight?.weightValue,
+    weightUnit: weight?.weightUnit,
+  };
 }
 
 async function ensureAuthorized(request: Request) {
@@ -1472,10 +1580,56 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           variationKey: it.variationKey,
           lastModified: it.lastModified,
           title: it.title,
+          description: it.description,
           quantity: it.quantity,
           price: it.price,
           imageUrls: it.imageUrls || [],
+          weightValue: it.weightValue,
+          weightUnit: it.weightUnit,
         }));
+
+        const detailItemIds = Array.from(
+          new Set(
+            inputItems
+              .map((item) => item.itemId?.trim())
+              .filter((value): value is string => Boolean(value)),
+          ),
+        );
+
+        if (detailItemIds.length > 0) {
+          const detailsByItemId = new Map<string, Awaited<ReturnType<typeof fetchTradingItemDetails>>>();
+          for (const itemId of detailItemIds) {
+            try {
+              const details = await fetchTradingItemDetails({ accessToken, itemId });
+              detailsByItemId.set(itemId, details);
+            } catch (error) {
+              await db.syncError.create({
+                data: {
+                  runId: run.id,
+                  storeId: store.id,
+                  ebayAccountId: ebayAccount.id,
+                  errorCode: "EBAY_GET_ITEM_FAILED",
+                  errorMessage: error instanceof Error ? error.message : String(error),
+                  ebayItemId: itemId,
+                },
+              });
+            }
+          }
+
+          inputItems = inputItems.map((item) => {
+            const itemId = item.itemId?.trim();
+            if (!itemId) return item;
+            const details = detailsByItemId.get(itemId);
+            if (!details) return item;
+            return {
+              ...item,
+              description: details.description ?? item.description,
+              weightValue: details.weightValue ?? item.weightValue,
+              weightUnit: details.weightUnit ?? item.weightUnit,
+            };
+          });
+        }
+
         nextOffset = tradingPage.hasMore ? offset + limit : null;
 
         if (inputItems.length === 0) {
