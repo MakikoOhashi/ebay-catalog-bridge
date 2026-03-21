@@ -31,9 +31,9 @@ This app is designed for batch-based catalog sync, not full-catalog real-time mi
 
 Recommended operating model:
 
-- regular batch sync: every 1 to 6 hours
-- larger reconciliation scan: once per day during low-traffic hours
-- FX refresh: once per day as part of the scheduled batch flow
+- automatic sync: once per day during low-traffic hours
+- manual sync: run on demand during the day when you want to refresh selected eBay accounts
+- FX refresh: once per day as part of the nightly sync batch
 
 ## Catalog Size Guidance
 

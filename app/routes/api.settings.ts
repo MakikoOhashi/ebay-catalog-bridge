@@ -14,7 +14,7 @@ type SettingsPayload = {
   errorNotifyEmail?: string | null;
 };
 
-const allowedSyncFrequencyMinutes = new Set([60, 180, 360, 720, 1440]);
+const allowedSyncFrequencyMinutes = new Set([1440]);
 
 function normalizeSyncFields(value?: string[] | string) {
   if (!value) return "title,description,images,weight,stock";
@@ -82,7 +82,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .map((value) => value.toString().trim())
         .filter(Boolean);
       body = {
-        syncFrequencyMinutes: Number(form.get("syncFrequencyMinutes") || 30),
+        syncFrequencyMinutes: Number(form.get("syncFrequencyMinutes") || 1440),
         syncFields,
         priceSyncEnabled: priceSyncEnabledValues.includes("true"),
         fxRateMode: form.get("fxRateMode")?.toString() || "fixed",

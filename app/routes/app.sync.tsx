@@ -36,6 +36,8 @@ const textMap = {
     notConnected: "未接続",
     syncAccount: "同期対象アカウント",
     selectAccountPlaceholder: "アカウントを選んでください",
+    selectManualAccounts: "手動同期するアカウント",
+    manualSyncTargetsHelp: "必要なアカウントだけチェックして同期できます。複数選択も可能です。",
     refreshStatus: "接続状態を更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
@@ -52,7 +54,10 @@ const textMap = {
     missing: "欠損",
     errors: "エラー",
     runSync: "手動同期",
-    runSyncDesc: "通常は自動で同期されるため、普段は操作不要です。確認したいときだけ、ここから手動で同期できます。",
+    runSyncDesc: "自動同期は夜間に1回だけ実行されます。日中に確認したいときだけ、ここから手動で同期できます。",
+    manualSyncButton: "選んだアカウントを同期する",
+    manualSyncRunning: "手動同期を実行中です...",
+    manualSyncNoSelection: "手動同期するアカウントを1つ以上選んでください。",
     reflectTestAccount: "テストに使うアカウント",
     reflectTestRun: "反映テストを実行",
     reflectTest: "反映テスト（任意）",
@@ -75,7 +80,8 @@ const textMap = {
     settings: "設定",
     settingsDesc: "ここでは自動同期バッチの頻度や価格設定を保存します。保存した内容は下の『現在の保存設定』に出ます。",
     settingsOpsNote: "このアプリは少しずつ巡回するバッチ同期を前提にしています。安定運用の目安として、Shopifyストアの総SKU数は 49,000 件以下を推奨します。",
-    syncFrequency: "自動同期バッチの頻度",
+    syncFrequency: "自動同期バッチ",
+    nightlyBatch: "毎日1回（夜間）",
     syncFields: "同期フィールド",
     syncFieldsHelp: "同期したい項目だけチェックしてください。",
     fieldTitle: "商品名",
@@ -164,6 +170,8 @@ const textMap = {
     notConnected: "Not connected",
     syncAccount: "Sync Account",
     selectAccountPlaceholder: "Select an account",
+    selectManualAccounts: "Accounts To Sync Manually",
+    manualSyncTargetsHelp: "Check only the accounts you want to sync. Multiple selection is supported.",
     refreshStatus: "Refresh Connection Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
@@ -180,7 +188,10 @@ const textMap = {
     missing: "Missing",
     errors: "Errors",
     runSync: "Manual Sync",
-    runSyncDesc: "Sync usually runs automatically, so you normally do not need to use this section. Use it only when you want to run a manual sync for checking.",
+    runSyncDesc: "Automatic sync runs once during the night. Use this section only when you want to run a manual sync during the day.",
+    manualSyncButton: "Sync Selected Accounts",
+    manualSyncRunning: "Running manual sync...",
+    manualSyncNoSelection: "Select at least one account for manual sync.",
     reflectTestAccount: "Account For Test Sync",
     reflectTestRun: "Run Reflection Test",
     reflectTest: "Reflection Test (optional)",
@@ -203,7 +214,8 @@ const textMap = {
     settings: "Settings",
     settingsDesc: "Save the automatic sync batch frequency and pricing options here. The saved result appears in 'Currently saved settings' below.",
     settingsOpsNote: "This app is designed for gradual batch-based syncs. For stable operation, we recommend keeping the total Shopify SKU count at 49,000 or below.",
-    syncFrequency: "Automatic Sync Batch Frequency",
+    syncFrequency: "Automatic Sync Batch",
+    nightlyBatch: "Once per day (night)",
     syncFields: "Sync Fields",
     syncFieldsHelp: "Check only the fields you want to sync.",
     fieldTitle: "Title",
@@ -379,14 +391,17 @@ const syncFieldOptions = [
   { value: "stock", labelKey: "fieldStock" },
 ] as const;
 
-const syncFrequencyOptions = [60, 180, 360, 720, 1440] as const;
-
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
   const [lang, setLang] = useState<Lang>("ja");
   const [testItems, setTestItems] = useState<TestItemDraft[]>([createEmptyTestItem()]);
   const [advancedItemsJson, setAdvancedItemsJson] = useState("");
   const [selectedFxRateMode, setSelectedFxRateMode] = useState<"fixed" | "auto">("fixed");
+  const [manualSyncAccountIds, setManualSyncAccountIds] = useState<string[]>([]);
+  const [manualFullScanComplete, setManualFullScanComplete] = useState(false);
+  const [manualSyncResult, setManualSyncResult] = useState<unknown>(null);
+  const [manualSyncError, setManualSyncError] = useState<string | null>(null);
+  const [manualSyncRunning, setManualSyncRunning] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("syncConsoleLang") : null;
@@ -456,7 +471,6 @@ export default function SyncConsolePage() {
   }, [resolveConflictFetcher.data, resolveConflictFetcher.state]);
 
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
-  const enqueueJson = useMemo(() => pretty(enqueueFetcher.data, t.noEnqueueRequested), [enqueueFetcher.data, t.noEnqueueRequested]);
   const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
   const conflictsJson = useMemo(() => pretty(conflictsFetcher.data, t.noConflictsLoaded), [conflictsFetcher.data, t.noConflictsLoaded]);
   const errorsJson = useMemo(() => pretty(errorsFetcher.data, t.noErrorsLoaded), [errorsFetcher.data, t.noErrorsLoaded]);
@@ -478,6 +492,19 @@ export default function SyncConsolePage() {
     }
   }, [currentSettings?.fxRateMode]);
 
+  useEffect(() => {
+    const connectedIds = connectedCheckpoints.map((checkpoint) => String(checkpoint.ebayAccountId));
+    setManualSyncAccountIds((current) => {
+      const filtered = current.filter((id) => connectedIds.includes(id));
+      if (filtered.length > 0) return filtered;
+      if (latestRun?.ebayAccountId && connectedIds.includes(String(latestRun.ebayAccountId))) {
+        return [String(latestRun.ebayAccountId)];
+      }
+      if (connectedIds.length === 1) return [connectedIds[0]];
+      return [];
+    });
+  }, [connectedCheckpoints, latestRun?.ebayAccountId]);
+
   const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
   const refreshAll = () => {
     statusFetcher.load("/api/sync/status");
@@ -496,6 +523,58 @@ export default function SyncConsolePage() {
     currentSettings?.autoFxLastRate != null && autoFxTargetCurrency
       ? `1 USD = ${currentSettings.autoFxLastRate} ${autoFxTargetCurrency}`
       : "-";
+  const enqueueJson = useMemo(
+    () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
+    [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
+  );
+
+  const runManualSync = async () => {
+    if (manualSyncAccountIds.length === 0) {
+      setManualSyncError(t.manualSyncNoSelection);
+      return;
+    }
+
+    setManualSyncError(null);
+    setManualSyncRunning(true);
+
+    try {
+      const results: Array<Record<string, unknown>> = [];
+      for (const accountId of manualSyncAccountIds) {
+        const form = new FormData();
+        form.set("shop", shop);
+        form.set("mode", "rolling");
+        form.set("ebayAccountId", accountId);
+        form.set("itemsJson", "");
+        if (manualFullScanComplete) {
+          form.append("fullScanComplete", "true");
+        }
+
+        const response = await fetch("/jobs/enqueue-sync", {
+          method: "POST",
+          body: form,
+        });
+        const json = (await response.json().catch(() => null)) as unknown;
+        results.push({
+          accountId: Number(accountId),
+          status: response.status,
+          ok: response.ok,
+          result: json,
+        });
+      }
+
+      setManualSyncResult({
+        mode: "manual_multi_account",
+        fullScanComplete: manualFullScanComplete,
+        results,
+      });
+      statusFetcher.load("/api/sync/status");
+      runsFetcher.load("/api/sync/runs?limit=20");
+    } catch (error) {
+      setManualSyncError(error instanceof Error ? error.message : t.unknown);
+    } finally {
+      setManualSyncRunning(false);
+    }
+  };
 
   return (
     <s-page heading={t.pageHeading}>
@@ -571,7 +650,7 @@ export default function SyncConsolePage() {
           <s-box padding="base" borderWidth="base" borderRadius="base">
             <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
             <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
-              <div>{t.syncFrequency}: {currentSettings.syncFrequencyMinutes}</div>
+              <div>{t.syncFrequency}: {t.nightlyBatch}</div>
               <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
               <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
               <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
@@ -590,26 +669,8 @@ export default function SyncConsolePage() {
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFrequency}</span>
-              <select
-                name="syncFrequencyMinutes"
-                defaultValue={String(currentSettings?.syncFrequencyMinutes ?? 60)}
-              >
-                {syncFrequencyOptions.map((minutes) => (
-                  <option key={minutes} value={minutes}>
-                    {lang === "ja"
-                      ? minutes >= 1440
-                        ? "1日ごと"
-                        : minutes >= 60
-                          ? `${minutes / 60}時間ごと`
-                          : `${minutes}分ごと`
-                      : minutes >= 1440
-                        ? "Every 1 day"
-                        : minutes >= 60
-                          ? `Every ${minutes / 60} hours`
-                          : `Every ${minutes} minutes`}
-                  </option>
-                ))}
-              </select>
+              <input type="hidden" name="syncFrequencyMinutes" value="1440" />
+              <input type="text" value={t.nightlyBatch} disabled />
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFields}</span>
@@ -724,29 +785,51 @@ export default function SyncConsolePage() {
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <s-stack direction="block" gap="base">
             <strong>{t.runSync}</strong>
-            <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
-              <input type="hidden" name="shop" value={shop} />
-              <input type="hidden" name="mode" value="rolling" />
-              <input type="hidden" name="fullScanComplete" value="false" />
-              <input type="hidden" name="itemsJson" value="" />
-              <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-                <span>{t.syncAccount}</span>
-                <select name="ebayAccountId" defaultValue="">
-                  <option value="">{t.selectAccountPlaceholder}</option>
-                  {connectedCheckpoints.map((checkpoint) => (
-                    <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
-                      #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ display: "grid", gap: 6 }}>
+                <span>{t.selectManualAccounts}</span>
+                <small style={{ color: "#666", lineHeight: 1.5 }}>{t.manualSyncTargetsHelp}</small>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {connectedCheckpoints.map((checkpoint) => {
+                    const accountId = String(checkpoint.ebayAccountId);
+                    const checked = manualSyncAccountIds.includes(accountId);
+                    return (
+                      <label key={checkpoint.ebayAccountId} style={{ display: "inline-flex", gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => {
+                            setManualSyncAccountIds((current) =>
+                              event.currentTarget.checked
+                                ? [...current, accountId]
+                                : current.filter((value) => value !== accountId),
+                            );
+                          }}
+                        />
+                        <span>
+                          #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label})
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
               <label style={{ display: "inline-flex", gap: 8 }}>
-                <input type="checkbox" name="fullScanComplete" value="true" />
+                <input
+                  type="checkbox"
+                  checked={manualFullScanComplete}
+                  onChange={(event) => setManualFullScanComplete(event.currentTarget.checked)}
+                />
                 <span>{t.forceFullScan}</span>
               </label>
               <small style={{ lineHeight: 1.5, color: "#666" }}>{t.forceFullScanHelp}</small>
-              <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
-            </enqueueFetcher.Form>
+              {manualSyncError ? (
+                <small style={{ color: "#b42318", lineHeight: 1.5 }}>{manualSyncError}</small>
+              ) : null}
+              <s-button onClick={runManualSync} {...(manualSyncRunning ? { loading: true } : {})}>
+                {manualSyncRunning ? t.manualSyncRunning : t.manualSyncButton}
+              </s-button>
+            </div>
             <retryFetcher.Form method="post" action="/api/sync/retry">
               <s-button type="submit" {...(retryFetcher.state !== "idle" ? { loading: true } : {})}>{t.retryLatest}</s-button>
             </retryFetcher.Form>
