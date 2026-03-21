@@ -28,7 +28,7 @@ const textMap = {
     step4: "4. 最新実行サマリーと商品一覧で結果を見る",
     connectEbay: "eBayアカウント接続",
     accountConnections: "eBayアカウント接続（最大4）",
-    accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。",
+    accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。同期された商品には、eBay ID のタグが自動で付きます。",
     slot: "スロット",
     connect: "接続",
     disconnect: "解除",
@@ -66,8 +66,8 @@ const textMap = {
     removeTestItem: "この商品を削除",
     advancedJson: "高度な入力（JSONを直接編集）",
     advancedJsonDesc: "通常は使いません。必要なときだけJSONを直接入力できます。",
-    forceFullScan: "フルスキャン完了として扱う（missing_on_ebay適用）",
-    forceFullScanHelp: "eBayで見つからなかったSKUを missing_on_ebay として扱いたいときだけ使います。通常はOFFのままでOKです。",
+    forceFullScan: "今回見つからなかった商品を売り切れにする",
+    forceFullScanHelp: "選んだ eBay アカウントで、前回はあったが今回の同期で見つからなかった商品を、Shopifyで在庫0・売り切れにします。",
     enqueueSync: "この内容で同期する",
     retryLatest: "最新Runを再試行",
     sendTestAlert: "テスト通知送信",
@@ -81,16 +81,16 @@ const textMap = {
     fieldImages: "画像",
     fieldWeight: "重量",
     fieldStock: "在庫",
-    fieldPrice: "価格",
     fixedFxRate: "固定為替レート",
     fxRateMode: "為替レート方式",
     fxModeFixed: "固定レート",
     fxModeAuto: "自動取得（Frankfurter）",
-    fxModeHelp: "自動取得を選ぶと、USD から Shopifyストア通貨へのレートを取得します。",
+    fxModeHelp: "自動取得では、現在は USD から Shopifyストア通貨へのレートを取得します。",
+    fxModeCurrentPair: "現在の自動換算",
     priceAdjustmentPercent: "価格調整（%）",
     priceAdjustmentFixed: "価格調整（固定額）",
-    priceAdjustmentPercentHelp: "10 で 10%増額、-10 で 10%減額です。",
-    priceAdjustmentFixedHelp: "Shopifyストア通貨で加減算します。300 で +300、-300 で -300 です。",
+    priceAdjustmentPercentHelp: "eBay価格に対して、Shopifyストア価格を調整します。10 で 10%増額、-10 で 10%減額です。",
+    priceAdjustmentFixedHelp: "eBay価格を換算した後、Shopifyストア通貨で加減算します。300 で +300、-300 で -300 です。",
     autoFxPair: "変換通貨",
     autoFxLastRate: "前回取得レート",
     autoFxLastFetchedAt: "前回取得日時",
@@ -154,7 +154,7 @@ const textMap = {
     step4: "4. Check the latest summary and product result",
     connectEbay: "Connect eBay Account",
     accountConnections: "eBay Account Connections (max 4)",
-    accountConnectionsDesc: "Manage which eBay accounts are linked to this Shopify store. In normal use, only connect accounts that actually own products.",
+    accountConnectionsDesc: "Manage which eBay accounts are linked to this Shopify store. In normal use, only connect accounts that actually own products. Synced products automatically receive an eBay ID tag.",
     slot: "Slot",
     connect: "Connect",
     disconnect: "Disconnect",
@@ -192,8 +192,8 @@ const textMap = {
     removeTestItem: "Remove This Item",
     advancedJson: "Advanced Input (edit JSON directly)",
     advancedJsonDesc: "You usually do not need this. Use only when you want to enter raw JSON manually.",
-    forceFullScan: "Force full scan complete (apply missing_on_ebay)",
-    forceFullScanHelp: "Use this only when you want missing eBay SKUs to be marked as missing_on_ebay. Normally leave it off.",
+    forceFullScan: "Mark products not found this time as sold out",
+    forceFullScanHelp: "For the selected eBay account only, products that were seen before but not found in this sync will be set to zero inventory and sold out in Shopify.",
     enqueueSync: "Run Sync Now",
     retryLatest: "Retry Latest Run",
     sendTestAlert: "Send Test Alert",
@@ -207,16 +207,16 @@ const textMap = {
     fieldImages: "Images",
     fieldWeight: "Weight",
     fieldStock: "Stock",
-    fieldPrice: "Price",
     fixedFxRate: "Fixed FX Rate",
     fxRateMode: "FX Rate Mode",
     fxModeFixed: "Fixed Rate",
     fxModeAuto: "Auto Fetch (Frankfurter)",
-    fxModeHelp: "Auto mode fetches the USD to Shopify store currency rate.",
+    fxModeHelp: "Auto mode currently fetches the rate from USD to the Shopify store currency.",
+    fxModeCurrentPair: "Current auto pair",
     priceAdjustmentPercent: "Price Adjustment (%)",
     priceAdjustmentFixed: "Price Adjustment (Fixed Amount)",
-    priceAdjustmentPercentHelp: "Use 10 for +10%, or -10 for a 10% discount.",
-    priceAdjustmentFixedHelp: "Applied in the Shopify store currency. Use 300 for +300, or -300 for -300.",
+    priceAdjustmentPercentHelp: "Adjust the Shopify store price relative to the eBay price. Use 10 for +10%, or -10 for a 10% discount.",
+    priceAdjustmentFixedHelp: "Applied after currency conversion in the Shopify store currency. Use 300 for +300, or -300 for -300.",
     autoFxPair: "Currency Pair",
     autoFxLastRate: "Last fetched rate",
     autoFxLastFetchedAt: "Last fetched at",
@@ -373,7 +373,6 @@ const syncFieldOptions = [
   { value: "images", labelKey: "fieldImages" },
   { value: "weight", labelKey: "fieldWeight" },
   { value: "stock", labelKey: "fieldStock" },
-  { value: "price", labelKey: "fieldPrice" },
 ] as const;
 
 export default function SyncConsolePage() {
@@ -621,6 +620,9 @@ export default function SyncConsolePage() {
                 <option value="auto">{t.fxModeAuto}</option>
               </select>
               <small>{t.fxModeHelp}</small>
+              {selectedFxRateMode === "auto" ? (
+                <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
+              ) : null}
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fixedFxRate}</span>

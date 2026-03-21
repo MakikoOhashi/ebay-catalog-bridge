@@ -15,9 +15,14 @@ type SettingsPayload = {
 };
 
 function normalizeSyncFields(value?: string[] | string) {
-  if (!value) return "title,description,images,weight,stock,price";
-  if (Array.isArray(value)) return value.map((v) => v.trim()).filter(Boolean).join(",");
-  return value;
+  if (!value) return "title,description,images,weight,stock";
+  const normalized = Array.isArray(value)
+    ? value.map((v) => v.trim()).filter(Boolean)
+    : value
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+  return normalized.filter((field) => field !== "price").join(",");
 }
 
 async function getOrCreateStore(shop: string) {
@@ -36,7 +41,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop: store.shop,
     settings: {
       syncFrequencyMinutes: store.syncFrequencyMinutes,
-      syncFields: store.syncFields.split(",").filter(Boolean),
+      syncFields: store.syncFields.split(",").filter((field) => Boolean(field) && field !== "price"),
       priceSyncEnabled: store.priceSyncEnabled,
       fxRateMode: store.fxRateMode,
       fixedFxRate: store.fixedFxRate,
@@ -126,7 +131,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     updated: true,
     settings: {
       syncFrequencyMinutes: updated.syncFrequencyMinutes,
-      syncFields: updated.syncFields.split(",").filter(Boolean),
+      syncFields: updated.syncFields.split(",").filter((field) => Boolean(field) && field !== "price"),
       priceSyncEnabled: updated.priceSyncEnabled,
       fxRateMode: updated.fxRateMode,
       fixedFxRate: updated.fixedFxRate,

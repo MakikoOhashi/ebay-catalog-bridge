@@ -70,7 +70,7 @@ model Store {
   shop         String        @unique
   createdAt    DateTime      @default(now()) @map("created_at")
   syncFrequencyMinutes Int    @default(30) @map("sync_frequency_minutes")
-  syncFields    String       @default("title,description,images,weight,stock,price") @map("sync_fields")
+  syncFields    String       @default("title,description,images,weight,stock") @map("sync_fields")
   priceSyncEnabled Boolean      @default(false) @map("price_sync_enabled")
   fxRateMode    String       @default("fixed") @map("fx_rate_mode")
   fixedFxRate   Float        @default(150) @map("fixed_fx_rate")

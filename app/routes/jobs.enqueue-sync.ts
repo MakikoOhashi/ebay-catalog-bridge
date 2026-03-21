@@ -308,17 +308,36 @@ function convertEbayPriceToShopify(input: {
   return rounded >= 0 ? rounded : null;
 }
 
+function normalizeTagPart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function buildEbayAccountTag(input: {
+  ebayUserId?: string | null;
+  fallbackLabel?: string | null;
+}) {
+  const raw = input.ebayUserId?.trim() || input.fallbackLabel?.trim() || "unknown";
+  return `ebay-account:${normalizeTagPart(raw)}`;
+}
+
 async function upsertShopifyProductBySku(input: {
   admin: ShopifyAdminClient;
   sku: string;
   title?: string;
   description?: string;
   price?: number | null;
+  accountTag?: string | null;
   knownVariantId?: string | null;
   knownProductId?: string | null;
 }): Promise<ShopifyUpsertResult> {
   const title = input.title?.trim() || `eBay ${input.sku}`;
   const descriptionHtml = input.description?.trim() || "";
+  const tags = input.accountTag ? [input.accountTag] : [];
 
   if (input.knownVariantId && input.knownProductId) {
     const normalizedPrice = normalizePrice(input.price);
@@ -378,6 +397,7 @@ async function upsertShopifyProductBySku(input: {
           id: input.knownProductId,
           title,
           descriptionHtml,
+          ...(tags.length > 0 ? { tags } : {}),
         },
       },
     );
@@ -501,6 +521,7 @@ async function upsertShopifyProductBySku(input: {
           id: existingProductId,
           title,
           descriptionHtml,
+          ...(tags.length > 0 ? { tags } : {}),
         },
       },
     );
@@ -546,6 +567,7 @@ async function upsertShopifyProductBySku(input: {
       product: {
         title,
         ...(descriptionHtml ? { descriptionHtml } : {}),
+        ...(tags.length > 0 ? { tags } : {}),
         status: "ACTIVE",
       },
     },
@@ -760,11 +782,19 @@ async function syncShopifyProductImages(input: {
   productId: string;
   imageUrls?: string[];
 }): Promise<string | null> {
-  const incomingUrls = (input.imageUrls || []).filter(Boolean);
+  const incomingUrls = uniqueUrls(input.imageUrls || []);
   if (incomingUrls.length === 0) return null;
 
   const existingUrls = await getExistingProductImageUrls(input.admin, input.productId);
-  const missingUrls = incomingUrls.filter((url) => !existingUrls.includes(url));
+  const existingKeys = new Set(
+    existingUrls
+      .map((url) => normalizeImageUrlForComparison(url))
+      .filter(Boolean),
+  );
+  const missingUrls = incomingUrls.filter((url) => {
+    const normalized = normalizeImageUrlForComparison(url);
+    return normalized ? !existingKeys.has(normalized) : !existingUrls.includes(url);
+  });
   if (missingUrls.length === 0) return null;
 
   const json = await graphqlJson(
@@ -914,6 +944,21 @@ function uniqueUrls(values: Array<string | null | undefined>) {
         .filter((value): value is string => Boolean(value)),
     ),
   );
+}
+
+function normalizeImageUrlForComparison(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    const normalizedPath = url.pathname.replace(/\/+$/, "");
+    const basename = normalizedPath.split("/").filter(Boolean).pop() || normalizedPath;
+    return basename.toLowerCase();
+  } catch {
+    const noQuery = trimmed.split("?")[0]?.replace(/\/+$/, "") || trimmed;
+    return (noQuery.split("/").filter(Boolean).pop() || noQuery).toLowerCase();
+  }
 }
 
 function parseTradingItems(xml: string): EbayTradingPage {
@@ -1370,6 +1415,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   let activeFxRate = store.fixedFxRate;
+  const ebayAccountTag = buildEbayAccountTag({
+    ebayUserId: ebayAccount.ebayUserId,
+    fallbackLabel: ebayAccount.label,
+  });
   if (shopifyAdmin && store.priceSyncEnabled && store.fxRateMode === "auto") {
     try {
       const targetCurrency = (await getShopCurrencyCode(shopifyAdmin)) || "JPY";
@@ -1495,7 +1544,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         title: item.title,
         description: item.description,
         price:
-          store.priceSyncEnabled && syncFieldSet.has("price")
+          store.priceSyncEnabled
             ? convertEbayPriceToShopify({
                 price: item.price ?? null,
                 fixedFxRate: activeFxRate,
@@ -1504,6 +1553,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 roundRule: store.roundRule,
               })
             : null,
+        accountTag: ebayAccountTag,
         knownVariantId: existing?.shopifyVariantId ?? null,
         knownProductId: existing?.shopifyProductId ?? null,
       });
