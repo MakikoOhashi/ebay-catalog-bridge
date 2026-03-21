@@ -66,8 +66,9 @@ const textMap = {
     removeTestItem: "この商品を削除",
     advancedJson: "高度な入力（JSONを直接編集）",
     advancedJsonDesc: "通常は使いません。必要なときだけJSONを直接入力できます。",
-    forceFullScan: "今回見つからなかった商品を売り切れにする",
-    forceFullScanHelp: "選んだ eBay アカウントで、前回はあったが今回の同期で見つからなかった商品を、Shopifyで在庫0・売り切れにします。",
+    forceFullScan: "見つからなかった商品を売り切れにする",
+    forceFullScanHelp: "選んだ eBay アカウントで、前回はあったのに今回の同期で見つからなかった商品を、Shopifyで在庫0・売り切れにします。",
+    accountIdFallbackNote: "eBay ID がまだ表示されない場合は、そのアカウントを一度つなぎ直すと反映されます。",
     enqueueSync: "この内容で同期する",
     retryLatest: "最新Runを再試行",
     sendTestAlert: "テスト通知送信",
@@ -192,8 +193,9 @@ const textMap = {
     removeTestItem: "Remove This Item",
     advancedJson: "Advanced Input (edit JSON directly)",
     advancedJsonDesc: "You usually do not need this. Use only when you want to enter raw JSON manually.",
-    forceFullScan: "Mark products not found this time as sold out",
+    forceFullScan: "Mark missing products as sold out",
     forceFullScanHelp: "For the selected eBay account only, products that were seen before but not found in this sync will be set to zero inventory and sold out in Shopify.",
+    accountIdFallbackNote: "If the eBay ID is not shown yet, reconnecting that account once should populate it.",
     enqueueSync: "Run Sync Now",
     retryLatest: "Retry Latest Run",
     sendTestAlert: "Send Test Alert",
@@ -525,6 +527,9 @@ export default function SyncConsolePage() {
                   {checkpoint?.ebayUserId ? (
                     <small style={{ color: "#666" }}>{slotLabel}</small>
                   ) : null}
+                  {isConnected && !checkpoint?.ebayUserId ? (
+                    <small style={{ color: "#666", lineHeight: 1.5 }}>{t.accountIdFallbackNote}</small>
+                  ) : null}
                   <s-badge tone={isConnected ? "success" : "neutral"}>
                     {isConnected
                       ? `${t.connected} (#${checkpoint?.ebayAccountId})`
@@ -720,7 +725,7 @@ export default function SyncConsolePage() {
                 <input type="checkbox" name="fullScanComplete" value="true" />
                 <span>{t.forceFullScan}</span>
               </label>
-              <small>{t.forceFullScanHelp}</small>
+              <small style={{ lineHeight: 1.5, color: "#666" }}>{t.forceFullScanHelp}</small>
               <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.enqueueSync}</s-button>
             </enqueueFetcher.Form>
             <retryFetcher.Form method="post" action="/api/sync/retry">
