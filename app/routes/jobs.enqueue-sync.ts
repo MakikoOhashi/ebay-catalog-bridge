@@ -325,6 +325,16 @@ function buildEbayAccountTag(input: {
   return `ebay-account:${normalizeTagPart(raw)}`;
 }
 
+function mergeAccountTag(existingTags: string[] | null | undefined, accountTag?: string | null) {
+  const tags = (existingTags || []).filter(
+    (tag) => tag.trim() && !tag.trim().startsWith("ebay-account:"),
+  );
+  if (accountTag?.trim()) {
+    tags.push(accountTag.trim());
+  }
+  return tags;
+}
+
 async function upsertShopifyProductBySku(input: {
   admin: ShopifyAdminClient;
   sku: string;
@@ -337,9 +347,26 @@ async function upsertShopifyProductBySku(input: {
 }): Promise<ShopifyUpsertResult> {
   const title = input.title?.trim() || `eBay ${input.sku}`;
   const descriptionHtml = input.description?.trim() || "";
-  const tags = input.accountTag ? [input.accountTag] : [];
 
   if (input.knownVariantId && input.knownProductId) {
+    const productJson = await graphqlJson(
+      input.admin,
+      `#graphql
+        query productTags($id: ID!) {
+          product(id: $id) {
+            id
+            tags
+          }
+        }`,
+      { id: input.knownProductId },
+    );
+    const existingTags =
+      (((productJson.data as Record<string, unknown> | undefined)?.product as Record<
+        string,
+        unknown
+      > | undefined)?.tags as string[] | undefined) || [];
+    const tags = mergeAccountTag(existingTags, input.accountTag);
+
     const normalizedPrice = normalizePrice(input.price);
     const updateJson = await graphqlJson(
       input.admin,
@@ -397,7 +424,7 @@ async function upsertShopifyProductBySku(input: {
           id: input.knownProductId,
           title,
           descriptionHtml,
-          ...(tags.length > 0 ? { tags } : {}),
+          tags,
         },
       },
     );
@@ -431,6 +458,7 @@ async function upsertShopifyProductBySku(input: {
               product {
                 id
                 title
+                tags
               }
             }
           }
@@ -460,6 +488,9 @@ async function upsertShopifyProductBySku(input: {
 
   if (existingNode?.id && (existingNode.product as Record<string, unknown> | undefined)?.id) {
     const existingProductId = (existingNode.product as Record<string, unknown>).id as string;
+    const existingProduct = existingNode.product as Record<string, unknown>;
+    const existingTags = (existingProduct.tags as string[] | undefined) || [];
+    const tags = mergeAccountTag(existingTags, input.accountTag);
     const normalizedPrice = normalizePrice(input.price);
 
     const variantUpdateJson = await graphqlJson(
@@ -521,7 +552,7 @@ async function upsertShopifyProductBySku(input: {
           id: existingProductId,
           title,
           descriptionHtml,
-          ...(tags.length > 0 ? { tags } : {}),
+          tags,
         },
       },
     );
@@ -542,6 +573,7 @@ async function upsertShopifyProductBySku(input: {
     };
   }
 
+  const tags = mergeAccountTag([], input.accountTag);
   const createJson = await graphqlJson(
     input.admin,
     `#graphql
