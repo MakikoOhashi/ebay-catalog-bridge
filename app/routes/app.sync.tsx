@@ -35,7 +35,7 @@ const textMap = {
     connected: "接続済み",
     notConnected: "未接続",
     syncAccount: "同期対象アカウント",
-    autoFirstConnected: "自動（最初の接続済み）",
+    selectAccountPlaceholder: "アカウントを選んでください",
     refreshStatus: "接続状態を更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
@@ -162,7 +162,7 @@ const textMap = {
     connected: "Connected",
     notConnected: "Not connected",
     syncAccount: "Sync Account",
-    autoFirstConnected: "Auto (first connected)",
+    selectAccountPlaceholder: "Select an account",
     refreshStatus: "Refresh Connection Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
@@ -713,7 +713,7 @@ export default function SyncConsolePage() {
               <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
                 <span>{t.syncAccount}</span>
                 <select name="ebayAccountId" defaultValue="">
-                  <option value="">{t.autoFirstConnected}</option>
+                  <option value="">{t.selectAccountPlaceholder}</option>
                   {connectedCheckpoints.map((checkpoint) => (
                     <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
                       #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}
@@ -751,7 +751,7 @@ export default function SyncConsolePage() {
                 <label style={{ display: "grid", gap: 4, maxWidth: 360, marginTop: 12 }}>
                   <span>{t.reflectTestAccount}</span>
                   <select name="ebayAccountId" defaultValue="">
-                    <option value="">{t.autoFirstConnected}</option>
+                    <option value="">{t.selectAccountPlaceholder}</option>
                     {connectedCheckpoints.map((checkpoint) => (
                       <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
                         #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}

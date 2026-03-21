@@ -1507,9 +1507,48 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const existing = await db.skuLink.findUnique({
       where: { storeId_sku: { storeId: store.id, sku } },
+      include: {
+        ebayAccount: {
+          select: {
+            id: true,
+            status: true,
+            ebayUserId: true,
+          },
+        },
+      },
     });
 
     if (existing && existing.ebayAccountId !== ebayAccount.id) {
+      const existingAccountIsReusable =
+        existing.ebayAccount.status !== "connected" ||
+        Boolean(
+          existing.ebayAccount.ebayUserId &&
+            ebayAccount.ebayUserId &&
+            existing.ebayAccount.ebayUserId === ebayAccount.ebayUserId,
+        );
+
+      if (existingAccountIsReusable) {
+        await db.skuLink.update({
+          where: { id: existing.id },
+          data: {
+            ebayAccountId: ebayAccount.id,
+            syncStatus: "ok",
+            lastError: null,
+          },
+        });
+
+        await db.skuConflict.updateMany({
+          where: {
+            storeId: store.id,
+            sku,
+            status: "open",
+          },
+          data: {
+            status: "resolved",
+            note: `Auto-resolved after reconnect to account ${ebayAccount.id}.`,
+          },
+        });
+      } else {
       counters.conflictCount += 1;
       const accountIds = [existing.ebayAccountId, ebayAccount.id].sort((a, b) => a - b);
       await db.skuConflict.upsert({
@@ -1536,6 +1575,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         },
       });
       continue;
+      }
     }
 
     const shouldSkipByTimestamp =
