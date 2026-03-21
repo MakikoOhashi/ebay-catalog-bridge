@@ -84,6 +84,8 @@ const textMap = {
     nightlyBatch: "毎日1回（夜間）",
     syncFields: "同期フィールド",
     syncFieldsHelp: "同期したい項目だけチェックしてください。",
+    weightSyncNote: "重量運用メモ",
+    weightSyncNoteDesc: "重量ベース送料を使う場合は、eBay側の重量を「梱包込みの実発送重量」で統一し、Shopifyのデフォルトパッケージ重量は 0 に設定してください。そうすると、同期した重量をそのまま送料計算に使えます。",
     fieldTitle: "商品名",
     fieldDescription: "説明文",
     fieldImages: "画像",
@@ -225,6 +227,8 @@ const textMap = {
     nightlyBatch: "Once per day (night)",
     syncFields: "Sync Fields",
     syncFieldsHelp: "Check only the fields you want to sync.",
+    weightSyncNote: "Weight Sync Note",
+    weightSyncNoteDesc: "If you plan to use weight-based shipping, keep eBay weights as the actual packed shipping weight and set the Shopify default package weight to 0. That lets Shopify calculate shipping directly from the synced product weight.",
     fieldTitle: "Title",
     fieldDescription: "Description",
     fieldImages: "Images",
@@ -716,6 +720,7 @@ export default function SyncConsolePage() {
                 ))}
               </div>
               <small>{t.syncFieldsHelp}</small>
+              <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.fxRateMode}</span>
