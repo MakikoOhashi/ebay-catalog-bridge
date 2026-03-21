@@ -14,6 +14,8 @@ type SettingsPayload = {
   errorNotifyEmail?: string | null;
 };
 
+const allowedSyncFrequencyMinutes = new Set([60, 180, 360, 720, 1440]);
+
 function normalizeSyncFields(value?: string[] | string) {
   if (!value) return "title,description,images,weight,stock";
   const normalized = Array.isArray(value)
@@ -99,9 +101,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     where: { id: store.id },
     data: {
       syncFrequencyMinutes:
-        body.syncFrequencyMinutes && body.syncFrequencyMinutes > 0
+        body.syncFrequencyMinutes && allowedSyncFrequencyMinutes.has(body.syncFrequencyMinutes)
           ? body.syncFrequencyMinutes
-          : store.syncFrequencyMinutes,
+          : allowedSyncFrequencyMinutes.has(store.syncFrequencyMinutes)
+            ? store.syncFrequencyMinutes
+            : 60,
       syncFields: normalizeSyncFields(body.syncFields),
       priceSyncEnabled:
         typeof body.priceSyncEnabled === "boolean"

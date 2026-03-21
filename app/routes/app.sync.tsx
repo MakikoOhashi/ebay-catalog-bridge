@@ -73,8 +73,9 @@ const textMap = {
     retryLatest: "最新Runを再試行",
     sendTestAlert: "テスト通知送信",
     settings: "設定",
-    settingsDesc: "普段はここで価格同期ON/OFFや為替レートを保存します。保存した内容は下の『現在の保存設定』に出ます。",
-    syncFrequency: "同期頻度（分）",
+    settingsDesc: "ここでは自動同期バッチの頻度や価格設定を保存します。保存した内容は下の『現在の保存設定』に出ます。",
+    settingsOpsNote: "このアプリは少しずつ巡回するバッチ同期を前提にしています。安定運用の目安として、Shopifyストアの総SKU数は 49,000 件以下を推奨します。",
+    syncFrequency: "自動同期バッチの頻度",
     syncFields: "同期フィールド",
     syncFieldsHelp: "同期したい項目だけチェックしてください。",
     fieldTitle: "商品名",
@@ -86,14 +87,14 @@ const textMap = {
     fxRateMode: "為替レート方式",
     fxModeFixed: "固定レート",
     fxModeAuto: "自動取得（Frankfurter）",
-    fxModeHelp: "自動取得では、現在は USD から Shopifyストア通貨へのレートを取得します。",
+    fxModeHelp: "自動取得では、USD から Shopifyストア通貨へのレートを自動同期バッチのタイミングで更新します。次の更新までは前回取得したレートを使います。",
     fxModeCurrentPair: "現在の自動換算",
     priceAdjustmentPercent: "価格調整（%）",
     priceAdjustmentFixed: "価格調整（固定額）",
     priceAdjustmentPercentHelp: "eBay価格に対して、Shopifyストア価格を調整します。10 で 10%増額、-10 で 10%減額です。",
     priceAdjustmentFixedHelp: "eBay価格を換算した後、Shopifyストア通貨で加減算します。300 で +300、-300 で -300 です。",
     autoFxPair: "変換通貨",
-    autoFxLastRate: "前回取得レート",
+    autoFxLastRate: "現在使用中のレート",
     autoFxLastFetchedAt: "前回取得日時",
     roundRule: "丸めルール",
     roundNearest: "四捨五入",
@@ -200,8 +201,9 @@ const textMap = {
     retryLatest: "Retry Latest Run",
     sendTestAlert: "Send Test Alert",
     settings: "Settings",
-    settingsDesc: "Save pricing and sync options here. The saved result appears in 'Currently saved settings' below.",
-    syncFrequency: "Sync Frequency (minutes)",
+    settingsDesc: "Save the automatic sync batch frequency and pricing options here. The saved result appears in 'Currently saved settings' below.",
+    settingsOpsNote: "This app is designed for gradual batch-based syncs. For stable operation, we recommend keeping the total Shopify SKU count at 49,000 or below.",
+    syncFrequency: "Automatic Sync Batch Frequency",
     syncFields: "Sync Fields",
     syncFieldsHelp: "Check only the fields you want to sync.",
     fieldTitle: "Title",
@@ -213,14 +215,14 @@ const textMap = {
     fxRateMode: "FX Rate Mode",
     fxModeFixed: "Fixed Rate",
     fxModeAuto: "Auto Fetch (Frankfurter)",
-    fxModeHelp: "Auto mode currently fetches the rate from USD to the Shopify store currency.",
+    fxModeHelp: "Auto mode updates the rate from USD to the Shopify store currency during the automatic sync batch. The last fetched rate is reused until the next refresh.",
     fxModeCurrentPair: "Current auto pair",
     priceAdjustmentPercent: "Price Adjustment (%)",
     priceAdjustmentFixed: "Price Adjustment (Fixed Amount)",
     priceAdjustmentPercentHelp: "Adjust the Shopify store price relative to the eBay price. Use 10 for +10%, or -10 for a 10% discount.",
     priceAdjustmentFixedHelp: "Applied after currency conversion in the Shopify store currency. Use 300 for +300, or -300 for -300.",
     autoFxPair: "Currency Pair",
-    autoFxLastRate: "Last fetched rate",
+    autoFxLastRate: "Current applied rate",
     autoFxLastFetchedAt: "Last fetched at",
     roundRule: "Round Rule",
     roundNearest: "Nearest",
@@ -376,6 +378,8 @@ const syncFieldOptions = [
   { value: "weight", labelKey: "fieldWeight" },
   { value: "stock", labelKey: "fieldStock" },
 ] as const;
+
+const syncFrequencyOptions = [60, 180, 360, 720, 1440] as const;
 
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
@@ -562,6 +566,7 @@ export default function SyncConsolePage() {
 
       <s-section heading={t.step2}>
         <s-paragraph>{t.settingsDesc}</s-paragraph>
+        <s-paragraph>{t.settingsOpsNote}</s-paragraph>
         {currentSettings ? (
           <s-box padding="base" borderWidth="base" borderRadius="base">
             <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
@@ -585,12 +590,26 @@ export default function SyncConsolePage() {
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFrequency}</span>
-              <input
-                type="number"
-                min={5}
+              <select
                 name="syncFrequencyMinutes"
-                defaultValue={currentSettings?.syncFrequencyMinutes ?? 30}
-              />
+                defaultValue={String(currentSettings?.syncFrequencyMinutes ?? 60)}
+              >
+                {syncFrequencyOptions.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {lang === "ja"
+                      ? minutes >= 1440
+                        ? "1日ごと"
+                        : minutes >= 60
+                          ? `${minutes / 60}時間ごと`
+                          : `${minutes}分ごと`
+                      : minutes >= 1440
+                        ? "Every 1 day"
+                        : minutes >= 60
+                          ? `Every ${minutes / 60} hours`
+                          : `Every ${minutes} minutes`}
+                  </option>
+                ))}
+              </select>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFields}</span>

@@ -11,6 +11,7 @@ This app stores prices in the Shopify store currency.
 - In `auto` mode, the app fetches the latest USD to Shopify store currency rate from [Frankfurter](https://frankfurter.dev/).
 - The current implementation assumes eBay source prices are in USD and converts them into the Shopify store currency.
 - The rounding rule is applied after conversion.
+- In auto mode, the FX rate is refreshed during the automatic sync batch and then reused until the next refresh window.
 
 Example:
 
@@ -18,6 +19,27 @@ Example:
 - Fixed FX rate: `150`
 - Shopify store currency: `JPY`
 - Saved Shopify price: `JPY 30000`
+
+## Sync Model
+
+This app is designed for batch-based catalog sync, not full-catalog real-time mirroring.
+
+- Automatic sync is intended to run in batches on a schedule.
+- Each batch should inspect only a limited slice of the catalog and update only items that changed.
+- A larger full scan can be run less often for reconciliation tasks such as `missing_on_ebay`.
+- In auto FX mode, the exchange rate is refreshed during the sync batch and the stored rate is reused until the next refresh.
+
+Recommended operating model:
+
+- regular batch sync: every 1 to 6 hours
+- larger reconciliation scan: once per day during low-traffic hours
+- FX refresh: once per day as part of the scheduled batch flow
+
+## Catalog Size Guidance
+
+For stable operation, we recommend keeping the total Shopify SKU count at **49,000 or below**.
+
+Once a store grows beyond 50,000 variants, Shopify platform limits can materially change how initial imports and new variant creation need to be scheduled. Stores above that scale may require a separate import strategy and more conservative batch planning.
 
 ## Future Pricing Options
 

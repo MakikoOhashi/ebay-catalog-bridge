@@ -746,6 +746,25 @@ async function fetchFrankfurterRate(fromCurrency: string, toCurrency: string) {
   return json.rates[toCurrency];
 }
 
+function shouldRefreshAutoFxRate(input: {
+  fetchedAt?: Date | string | null;
+  targetCurrency?: string | null;
+  nextTargetCurrency: string;
+}) {
+  if (!input.fetchedAt) return true;
+  if (!input.targetCurrency) return true;
+  if (input.targetCurrency.toUpperCase() !== input.nextTargetCurrency.toUpperCase()) {
+    return true;
+  }
+
+  const fetchedAt =
+    input.fetchedAt instanceof Date ? input.fetchedAt : new Date(input.fetchedAt);
+  if (Number.isNaN(fetchedAt.getTime())) return true;
+
+  const ageMs = Date.now() - fetchedAt.getTime();
+  return ageMs >= 24 * 60 * 60 * 1000;
+}
+
 async function getVariantInventoryRef(
   admin: ShopifyAdminClient,
   variantId: string,
@@ -1454,19 +1473,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (shopifyAdmin && store.priceSyncEnabled && store.fxRateMode === "auto") {
     try {
       const targetCurrency = (await getShopCurrencyCode(shopifyAdmin)) || "JPY";
-      activeFxRate =
-        targetCurrency.toUpperCase() === "USD"
-          ? 1
-          : await fetchFrankfurterRate("USD", targetCurrency.toUpperCase());
+      const normalizedTargetCurrency = targetCurrency.toUpperCase();
+      const canReuseSavedRate =
+        store.autoFxLastRate != null &&
+        !shouldRefreshAutoFxRate({
+          fetchedAt: store.autoFxLastFetchedAt,
+          targetCurrency: store.autoFxLastTargetCurrency,
+          nextTargetCurrency: normalizedTargetCurrency,
+        });
 
-      await db.store.update({
-        where: { id: store.id },
-        data: {
-          autoFxLastRate: activeFxRate,
-          autoFxLastFetchedAt: new Date(),
-          autoFxLastTargetCurrency: targetCurrency.toUpperCase(),
-        },
-      });
+      if (canReuseSavedRate) {
+        activeFxRate = store.autoFxLastRate!;
+      } else {
+        activeFxRate =
+          normalizedTargetCurrency === "USD"
+            ? 1
+            : await fetchFrankfurterRate("USD", normalizedTargetCurrency);
+
+        await db.store.update({
+          where: { id: store.id },
+          data: {
+            autoFxLastRate: activeFxRate,
+            autoFxLastFetchedAt: new Date(),
+            autoFxLastTargetCurrency: normalizedTargetCurrency,
+          },
+        });
+      }
     } catch (error) {
       counters.errorCount += 1;
       await db.syncError.create({
