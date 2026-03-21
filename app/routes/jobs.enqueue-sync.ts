@@ -14,6 +14,8 @@ type SyncInputItem = {
   quantity?: number;
   price?: number;
   imageUrls?: string[];
+  weightValue?: number;
+  weightUnit?: string;
 };
 
 type EnqueueBody = {
@@ -29,6 +31,12 @@ type EnqueueBody = {
 
 type EbayInventoryItem = {
   sku?: string;
+  packageWeightAndSize?: {
+    weight?: {
+      value?: number;
+      unit?: string;
+    };
+  };
   product?: {
     title?: string;
     description?: string;
@@ -92,6 +100,7 @@ type RunCounters = {
 type ShopifyUpsertResult = {
   productId: string | null;
   variantId: string | null;
+  inventoryItemId: string | null;
   error: string | null;
 };
 
@@ -266,6 +275,20 @@ function normalizePrice(value?: number | null) {
   return value.toFixed(2);
 }
 
+function normalizeWeightValue(value?: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  return value;
+}
+
+function mapEbayWeightUnitToShopify(unit?: string | null) {
+  const normalized = unit?.trim().toUpperCase();
+  if (normalized === "GRAM" || normalized === "GRAMS") return "GRAMS";
+  if (normalized === "KILOGRAM" || normalized === "KILOGRAMS") return "KILOGRAMS";
+  if (normalized === "OUNCE" || normalized === "OUNCES") return "OUNCES";
+  if (normalized === "POUND" || normalized === "POUNDS") return "POUNDS";
+  return null;
+}
+
 function applyRoundRule(value: number, roundRule?: string | null) {
   const normalizedRule = roundRule?.trim().toLowerCase() || "nearest";
   if (normalizedRule === "up" || normalizedRule === "ceil" || normalizedRule === "ceiling") {
@@ -341,12 +364,28 @@ async function upsertShopifyProductBySku(input: {
   title?: string;
   description?: string;
   price?: number | null;
+  weightValue?: number | null;
+  weightUnit?: string | null;
   accountTag?: string | null;
   knownVariantId?: string | null;
   knownProductId?: string | null;
 }): Promise<ShopifyUpsertResult> {
   const title = input.title?.trim() || `eBay ${input.sku}`;
   const descriptionHtml = input.description?.trim() || "";
+  const normalizedWeightValue = normalizeWeightValue(input.weightValue);
+  const normalizedWeightUnit = mapEbayWeightUnitToShopify(input.weightUnit);
+  const inventoryItemPayload =
+    normalizedWeightValue != null && normalizedWeightUnit
+      ? {
+          sku: input.sku,
+          measurement: {
+            weight: {
+              value: normalizedWeightValue,
+              unit: normalizedWeightUnit,
+            },
+          },
+        }
+      : { sku: input.sku };
 
   if (input.knownVariantId && input.knownProductId) {
     const productJson = await graphqlJson(
@@ -388,7 +427,7 @@ async function upsertShopifyProductBySku(input: {
         variants: [
           {
             id: input.knownVariantId,
-            inventoryItem: { sku: input.sku },
+            inventoryItem: inventoryItemPayload,
             ...(normalizedPrice ? { price: normalizedPrice } : {}),
           },
         ],
@@ -400,6 +439,7 @@ async function upsertShopifyProductBySku(input: {
       return {
         productId: input.knownProductId,
         variantId: input.knownVariantId,
+        inventoryItemId: null,
         error: `productVariantsBulkUpdate failed: ${updateErrors.join("; ")}`,
       };
     }
@@ -434,6 +474,7 @@ async function upsertShopifyProductBySku(input: {
       return {
         productId: input.knownProductId,
         variantId: input.knownVariantId,
+        inventoryItemId: null,
         error: `productUpdate failed: ${productUpdateErrors.join("; ")}`,
       };
     }
@@ -441,6 +482,7 @@ async function upsertShopifyProductBySku(input: {
     return {
       productId: input.knownProductId,
       variantId: input.knownVariantId,
+      inventoryItemId: null,
       error: null,
     };
   }
@@ -477,11 +519,12 @@ async function upsertShopifyProductBySku(input: {
     .filter(Boolean);
 
   if (existingEdges.length > 1) {
-    return {
-      productId: null,
-      variantId: null,
-      error: `Multiple Shopify variants matched SKU ${input.sku}.`,
-    };
+      return {
+        productId: null,
+        variantId: null,
+        inventoryItemId: null,
+        error: `Multiple Shopify variants matched SKU ${input.sku}.`,
+      };
   }
 
   const existingNode = existingEdges[0];
@@ -513,7 +556,7 @@ async function upsertShopifyProductBySku(input: {
         variants: [
           {
             id: existingNode.id as string,
-            inventoryItem: { sku: input.sku },
+            inventoryItem: inventoryItemPayload,
             ...(normalizedPrice ? { price: normalizedPrice } : {}),
           },
         ],
@@ -528,6 +571,7 @@ async function upsertShopifyProductBySku(input: {
       return {
         productId: existingProductId,
         variantId: existingNode.id as string,
+        inventoryItemId: null,
         error: `productVariantsBulkUpdate failed: ${variantUpdateErrors.join("; ")}`,
       };
     }
@@ -562,6 +606,7 @@ async function upsertShopifyProductBySku(input: {
       return {
         productId: existingProductId,
         variantId: existingNode.id as string,
+        inventoryItemId: null,
         error: `productUpdate failed: ${productUpdateErrors.join("; ")}`,
       };
     }
@@ -569,6 +614,7 @@ async function upsertShopifyProductBySku(input: {
     return {
       productId: existingProductId,
       variantId: existingNode.id as string,
+      inventoryItemId: null,
       error: null,
     };
   }
@@ -585,6 +631,9 @@ async function upsertShopifyProductBySku(input: {
               edges {
                 node {
                   id
+                  inventoryItem {
+                    id
+                  }
                 }
               }
             }
@@ -610,6 +659,7 @@ async function upsertShopifyProductBySku(input: {
     return {
       productId: null,
       variantId: null,
+      inventoryItemId: null,
       error: `productCreate failed: ${createErrors.join("; ")}`,
     };
   }
@@ -626,11 +676,18 @@ async function upsertShopifyProductBySku(input: {
   const variantId = (createdVariantEdge?.node as Record<string, unknown> | undefined)?.id as
     | string
     | undefined;
+  const inventoryItemId = (
+    ((createdVariantEdge?.node as Record<string, unknown> | undefined)?.inventoryItem as Record<
+      string,
+      unknown
+    > | undefined)?.id as string | undefined
+  ) || null;
 
   if (!productId || !variantId) {
     return {
       productId,
       variantId: variantId || null,
+      inventoryItemId,
       error: "productCreate succeeded but variant id was not returned.",
     };
   }
@@ -655,7 +712,7 @@ async function upsertShopifyProductBySku(input: {
       variants: [
         {
           id: variantId,
-          inventoryItem: { sku: input.sku },
+          inventoryItem: inventoryItemPayload,
           ...(normalizePrice(input.price) ? { price: normalizePrice(input.price) } : {}),
         },
       ],
@@ -667,6 +724,7 @@ async function upsertShopifyProductBySku(input: {
     return {
       productId,
       variantId,
+      inventoryItemId,
       error: `productVariantsBulkUpdate failed: ${updateErrors.join("; ")}`,
     };
   }
@@ -674,6 +732,7 @@ async function upsertShopifyProductBySku(input: {
   return {
     productId,
     variantId,
+    inventoryItemId,
     error: null,
   };
 }
@@ -1386,6 +1445,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           quantity: it.availability?.shipToLocationAvailability?.quantity,
           price: it.price?.value ? Number(it.price.value) : undefined,
           imageUrls: it.product?.imageUrls || [],
+          weightValue: it.packageWeightAndSize?.weight?.value,
+          weightUnit: it.packageWeightAndSize?.weight?.unit,
         }));
         nextOffset = parseNextOffset(inventoryPage.next || null);
       } else {
@@ -1657,6 +1718,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
                 roundRule: store.roundRule,
               })
             : null,
+        weightValue: syncFieldSet.has("weight") ? item.weightValue ?? null : null,
+        weightUnit: syncFieldSet.has("weight") ? item.weightUnit ?? null : null,
         accountTag: ebayAccountTag,
         knownVariantId: existing?.shopifyVariantId ?? null,
         knownProductId: existing?.shopifyProductId ?? null,
