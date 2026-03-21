@@ -137,6 +137,12 @@ const textMap = {
     syncErrorsJsonDesc: "エラーAPIの生データです（デバッグ向け）。",
     actionsJson: "操作JSON",
     actionsJsonDesc: "直近アクションのレスポンスです（デバッグ向け）。",
+    itemDebug: "SKUデバッグ",
+    itemDebugDesc: "指定したeBayアカウントIDとSKUについて、eBayの生レスポンスと重量情報を確認します。",
+    itemDebugAccountId: "eBayアカウントID",
+    itemDebugSku: "SKU",
+    itemDebugLoad: "SKUデバッグを読み込む",
+    itemDebugJson: "SKUデバッグJSON",
     noStatusLoaded: "ステータス未読み込み",
     noEnqueueRequested: "enqueue未実行",
     noSettingsLoaded: "設定未読み込み",
@@ -145,6 +151,7 @@ const textMap = {
     noResolveAction: "競合解消未実行",
     noRetryRequested: "再試行未実行",
     noNotifyRequested: "通知テスト未実行",
+    noItemDebugLoaded: "SKUデバッグ未読み込み",
     noRunHistoryLoaded: "履歴未読み込み",
     unknown: "不明",
     japanese: "日本語",
@@ -271,6 +278,12 @@ const textMap = {
     syncErrorsJsonDesc: "Raw errors API response (for debugging).",
     actionsJson: "Actions JSON",
     actionsJsonDesc: "Latest action responses (for debugging).",
+    itemDebug: "SKU Debug",
+    itemDebugDesc: "Inspect the raw eBay response and weight fields for a specific eBay account ID and SKU.",
+    itemDebugAccountId: "eBay Account ID",
+    itemDebugSku: "SKU",
+    itemDebugLoad: "Load SKU Debug",
+    itemDebugJson: "SKU Debug JSON",
     noStatusLoaded: "No status loaded yet.",
     noEnqueueRequested: "No enqueue request sent yet.",
     noSettingsLoaded: "No settings loaded yet.",
@@ -279,6 +292,7 @@ const textMap = {
     noResolveAction: "No conflict resolution action yet.",
     noRetryRequested: "No retry requested yet.",
     noNotifyRequested: "No notification test requested yet.",
+    noItemDebugLoaded: "No SKU debug loaded yet.",
     noRunHistoryLoaded: "No run history loaded yet.",
     unknown: "unknown",
     japanese: "日本語",
@@ -429,6 +443,7 @@ export default function SyncConsolePage() {
   const notifyTestFetcher = useFetcher();
   const runsFetcher = useFetcher<SyncRunsPayload>();
   const disconnectFetcher = useFetcher();
+  const itemDebugFetcher = useFetcher();
 
   useEffect(() => {
     statusFetcher.load("/api/sync/status");
@@ -477,6 +492,7 @@ export default function SyncConsolePage() {
   const resolveJson = useMemo(() => pretty(resolveConflictFetcher.data, t.noResolveAction), [resolveConflictFetcher.data, t.noResolveAction]);
   const retryJson = useMemo(() => pretty(retryFetcher.data, t.noRetryRequested), [retryFetcher.data, t.noRetryRequested]);
   const notifyJson = useMemo(() => pretty(notifyTestFetcher.data, t.noNotifyRequested), [notifyTestFetcher.data, t.noNotifyRequested]);
+  const itemDebugJson = useMemo(() => pretty(itemDebugFetcher.data, t.noItemDebugLoaded), [itemDebugFetcher.data, t.noItemDebugLoaded]);
   const runsJson = useMemo(() => pretty(runsFetcher.data, t.noRunHistoryLoaded), [runsFetcher.data, t.noRunHistoryLoaded]);
 
   const latestRun = statusFetcher.data?.latestRun || null;
@@ -1076,6 +1092,33 @@ export default function SyncConsolePage() {
               {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
             </pre>
           </s-box>
+        </details>
+        <details>
+          <summary>{t.itemDebug}</summary>
+          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <s-paragraph>{t.itemDebugDesc}</s-paragraph>
+            <itemDebugFetcher.Form method="get" action="/api/debug/ebay-item">
+              <s-stack direction="inline" gap="base">
+                <label style={{ display: "grid", gap: 4, maxWidth: 220 }}>
+                  <span>{t.itemDebugAccountId}</span>
+                  <input type="number" name="accountId" min={1} placeholder="1" />
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 320 }}>
+                  <span>{t.itemDebugSku}</span>
+                  <input type="text" name="sku" placeholder="A111" />
+                </label>
+                <div style={{ alignSelf: "end" }}>
+                  <s-button type="submit" {...(itemDebugFetcher.state !== "idle" ? { loading: true } : {})}>
+                    {t.itemDebugLoad}
+                  </s-button>
+                </div>
+              </s-stack>
+            </itemDebugFetcher.Form>
+            <s-box padding="base" borderWidth="base" borderRadius="base">
+              <strong>{t.itemDebugJson}</strong>
+              <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>{itemDebugJson}</pre>
+            </s-box>
+          </div>
         </details>
       </s-section>
     </s-page>
