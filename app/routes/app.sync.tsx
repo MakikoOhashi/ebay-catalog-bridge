@@ -458,6 +458,7 @@ export default function SyncConsolePage() {
   const statusFetcher = useFetcher<SyncStatusPayload>();
   const enqueueFetcher = useFetcher();
   const settingsFetcher = useFetcher<SettingsResponsePayload>();
+  const settingsSaveFetcher = useFetcher<SettingsResponsePayload>();
   const conflictsFetcher = useFetcher();
   const errorsFetcher = useFetcher();
   const resolveConflictFetcher = useFetcher();
@@ -506,6 +507,13 @@ export default function SyncConsolePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolveConflictFetcher.data, resolveConflictFetcher.state]);
+
+  useEffect(() => {
+    if (settingsSaveFetcher.data && settingsSaveFetcher.state === "idle") {
+      settingsFetcher.load("/api/settings");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsSaveFetcher.data, settingsSaveFetcher.state]);
 
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
@@ -641,7 +649,7 @@ export default function SyncConsolePage() {
         <div style={{ marginTop: 12, marginBottom: 12 }}>
           <s-button
             onClick={refreshAll}
-            {...(statusFetcher.state !== "idle" || runsFetcher.state !== "idle" || settingsFetcher.state !== "idle" ? { loading: true } : {})}
+            {...(statusFetcher.state !== "idle" ? { loading: true } : {})}
           >
             {t.refreshStatus}
           </s-button>
@@ -713,7 +721,7 @@ export default function SyncConsolePage() {
             </div>
           </s-box>
         ) : null}
-        <settingsFetcher.Form method="post" action="/api/settings">
+        <settingsSaveFetcher.Form method="post" action="/api/settings">
           <s-stack direction="block" gap="base">
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.syncFrequency}</span>
@@ -833,9 +841,9 @@ export default function SyncConsolePage() {
               />
               <span>{t.enablePriceSync}</span>
             </label>
-            <s-button type="submit" {...(settingsFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
+            <s-button type="submit" {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
           </s-stack>
-        </settingsFetcher.Form>
+        </settingsSaveFetcher.Form>
       </s-section>
 
       <s-section heading={t.step3}>
