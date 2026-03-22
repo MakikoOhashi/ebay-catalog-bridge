@@ -469,11 +469,12 @@ export default function SyncConsolePage() {
   const itemDebugFetcher = useFetcher();
 
   useEffect(() => {
+    if (!clientReady) return;
     statusFetcher.load("/api/sync/status");
     runsFetcher.load("/api/sync/runs?limit=20");
     settingsFetcher.load("/api/settings");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clientReady]);
 
   useEffect(() => {
     if (disconnectFetcher.data && disconnectFetcher.state === "idle") {
@@ -576,11 +577,9 @@ export default function SyncConsolePage() {
 
   if (!clientReady) {
     return (
-      <s-page heading={t.pageHeading}>
-        <s-section heading={t.pageHeading}>
-          <s-paragraph>{lang === "ja" ? "読み込み中..." : "Loading..."}</s-paragraph>
-        </s-section>
-      </s-page>
+      <div suppressHydrationWarning style={{ padding: 16 }}>
+        {lang === "ja" ? "読み込み中..." : "Loading..."}
+      </div>
     );
   }
 
