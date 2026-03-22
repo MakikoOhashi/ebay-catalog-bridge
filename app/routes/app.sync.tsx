@@ -425,6 +425,7 @@ const syncFieldOptions = [
 export default function SyncConsolePage() {
   const { shop } = useLoaderData<typeof loader>();
   const [lang, setLang] = useState<Lang>("ja");
+  const [clientReady, setClientReady] = useState(false);
   const [testItems, setTestItems] = useState<TestItemDraft[]>([createEmptyTestItem()]);
   const [advancedItemsJson, setAdvancedItemsJson] = useState("");
   const [selectedFxRateMode, setSelectedFxRateMode] = useState<"fixed" | "auto">("fixed");
@@ -433,6 +434,10 @@ export default function SyncConsolePage() {
   const [manualSyncResult, setManualSyncResult] = useState<unknown>(null);
   const [manualSyncError, setManualSyncError] = useState<string | null>(null);
   const [manualSyncRunning, setManualSyncRunning] = useState(false);
+
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("syncConsoleLang") : null;
@@ -560,6 +565,16 @@ export default function SyncConsolePage() {
     () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
     [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
   );
+
+  if (!clientReady) {
+    return (
+      <s-page heading={t.pageHeading}>
+        <s-section heading={t.pageHeading}>
+          <s-paragraph>{lang === "ja" ? "読み込み中..." : "Loading..."}</s-paragraph>
+        </s-section>
+      </s-page>
+    );
+  }
 
   const runManualSync = async () => {
     if (manualSyncAccountIds.length === 0) {
