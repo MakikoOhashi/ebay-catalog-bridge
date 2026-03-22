@@ -108,8 +108,6 @@ const textMap = {
     roundNearest: "四捨五入",
     roundUp: "切り上げ",
     roundDown: "切り捨て",
-    errorNotifyEmail: "通知メール（準備中）",
-    errorNotifyEmailHelp: "メール通知はまだ未実装です。現在はSlack通知のみ動作します。",
     slackNotifyWebhookUrl: "Slack通知Webhook URL",
     slackNotifyWebhookUrlHelp: "このストア専用のSlack Incoming Webhook URLを設定すると、同期エラー時の通知とテスト通知がこのストアのSlackに届きます。",
     slackNotifyWebhookUrlHowTo: "Slack管理画面で Incoming Webhooks を追加すると取得できます。",
@@ -255,8 +253,6 @@ const textMap = {
     roundNearest: "Nearest",
     roundUp: "Round Up",
     roundDown: "Round Down",
-    errorNotifyEmail: "Error Notify Email (coming soon)",
-    errorNotifyEmailHelp: "Email notifications are not implemented yet. Only Slack notifications are active right now.",
     slackNotifyWebhookUrl: "Slack Notify Webhook URL",
     slackNotifyWebhookUrlHelp: "Set a store-specific Slack Incoming Webhook URL to send sync issue alerts and test notifications to this store's Slack.",
     slackNotifyWebhookUrlHowTo: "You can get it by adding Incoming Webhooks in Slack.",
@@ -392,7 +388,6 @@ type SettingsResponsePayload = {
     autoFxLastFetchedAt?: string | null;
     autoFxLastTargetCurrency?: string | null;
     roundRule: string;
-    errorNotifyEmail: string | null;
     slackNotifyWebhookUrl: string | null;
   };
 };
@@ -700,7 +695,6 @@ export default function SyncConsolePage() {
               <div>{t.roundRule}: {currentSettings.roundRule}</div>
               <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
               <div>{t.slackNotifyWebhookUrl}: {currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"}</div>
-              <div>{t.errorNotifyEmail}: {currentSettings.errorNotifyEmail || "-"}</div>
             </div>
           </s-box>
         ) : null}
@@ -813,17 +807,6 @@ export default function SyncConsolePage() {
                   {t.slackNotifyWebhookUrlHelpLink}
                 </a>
               </small>
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.errorNotifyEmail}</span>
-              <input
-                type="email"
-                name="errorNotifyEmail"
-                placeholder="ops@example.com"
-                defaultValue={currentSettings?.errorNotifyEmail ?? ""}
-                disabled
-              />
-              <small>{t.errorNotifyEmailHelp}</small>
             </label>
             <label style={{ display: "inline-flex", gap: 8 }}>
               <input type="hidden" name="priceSyncEnabled" value="false" />
