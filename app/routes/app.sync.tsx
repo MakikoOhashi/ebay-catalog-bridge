@@ -1050,23 +1050,6 @@ export default function SyncConsolePage() {
         </div>
       </s-section>
 
-      <s-section heading={t.syncErrors}>
-        <s-paragraph>{t.syncErrorsDesc}</s-paragraph>
-        <errorsFetcher.Form method="get" action="/api/sync/errors">
-          <s-stack direction="inline" gap="base">
-            <label style={{ display: "grid", gap: 4 }}>
-              <span>{t.limit}</span>
-              <input type="number" name="limit" defaultValue={50} min={1} max={200} />
-            </label>
-            <label style={{ display: "grid", gap: 4 }}>
-              <span>{t.runIdOptional}</span>
-              <input type="number" name="runId" placeholder="latest" />
-            </label>
-            <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>{t.loadErrors}</s-button>
-          </s-stack>
-        </errorsFetcher.Form>
-      </s-section>
-
       <s-section heading={t.debugData}>
         <s-paragraph>{t.debugDataDesc}</s-paragraph>
         <details>
@@ -1086,6 +1069,29 @@ export default function SyncConsolePage() {
                 <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
               </s-stack>
             </resolveConflictFetcher.Form>
+          </div>
+        </details>
+        <details>
+          <summary>{t.syncErrors}</summary>
+          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <s-paragraph>{t.syncErrorsDesc}</s-paragraph>
+            <errorsFetcher.Form method="get" action="/api/sync/errors">
+              <s-stack direction="inline" gap="base">
+                <label style={{ display: "grid", gap: 4 }}>
+                  <span>{t.limit}</span>
+                  <input type="number" name="limit" defaultValue={50} min={1} max={200} />
+                </label>
+                <label style={{ display: "grid", gap: 4 }}>
+                  <span>{t.runIdOptional}</span>
+                  <input type="number" name="runId" placeholder="latest" />
+                </label>
+                <div style={{ alignSelf: "end" }}>
+                  <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>
+                    {t.loadErrors}
+                  </s-button>
+                </div>
+              </s-stack>
+            </errorsFetcher.Form>
           </div>
         </details>
         <details>
