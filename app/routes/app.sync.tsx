@@ -559,7 +559,6 @@ export default function SyncConsolePage() {
     conflictsFetcher.load("/api/conflicts");
   };
   const activeConnectedCount = connectedCheckpoints.length;
-  const statusRefreshing = statusFetcher.state !== "idle";
   const serializedTestItems = useMemo(() => {
     const advanced = advancedItemsJson.trim();
     return advanced || serializeTestItems(testItems);
@@ -648,11 +647,7 @@ export default function SyncConsolePage() {
             : `Connected now: ${activeConnectedCount} / 4`}
         </div>
         <div style={{ marginTop: 12, marginBottom: 12 }}>
-          <s-button onClick={refreshAll} disabled={statusRefreshing}>
-            {statusRefreshing
-              ? (lang === "ja" ? "更新中..." : "Refreshing...")
-              : t.refreshStatus}
-          </s-button>
+          <s-button onClick={refreshAll}>{t.refreshStatus}</s-button>
         </div>
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
           {accountSlots.map((slotLabel, index) => {
