@@ -111,7 +111,9 @@ const textMap = {
     errorNotifyEmail: "通知メール（準備中）",
     errorNotifyEmailHelp: "メール通知はまだ未実装です。現在はSlack通知のみ動作します。",
     slackNotifyWebhookUrl: "Slack通知Webhook URL",
-    slackNotifyWebhookUrlHelp: "このストア専用のSlack Incoming Webhook URLを設定すると、同期エラー時の通知とテスト通知がこのストアのSlackに届きます。未設定の場合は、共通Webhookがあればそちらが使われます。",
+    slackNotifyWebhookUrlHelp: "このストア専用のSlack Incoming Webhook URLを設定すると、同期エラー時の通知とテスト通知がこのストアのSlackに届きます。",
+    slackNotifyWebhookUrlHowTo: "Slack管理画面で Incoming Webhooks を追加すると取得できます。",
+    slackNotifyWebhookUrlHelpLink: "Slackヘルプ",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
     resolveConflict: "運用者向け: 競合解消",
@@ -256,7 +258,9 @@ const textMap = {
     errorNotifyEmail: "Error Notify Email (coming soon)",
     errorNotifyEmailHelp: "Email notifications are not implemented yet. Only Slack notifications are active right now.",
     slackNotifyWebhookUrl: "Slack Notify Webhook URL",
-    slackNotifyWebhookUrlHelp: "Set a store-specific Slack Incoming Webhook URL to send sync issue alerts and test notifications to this store's Slack. If this is empty, the shared webhook is used when available.",
+    slackNotifyWebhookUrlHelp: "Set a store-specific Slack Incoming Webhook URL to send sync issue alerts and test notifications to this store's Slack.",
+    slackNotifyWebhookUrlHowTo: "You can get it by adding Incoming Webhooks in Slack.",
+    slackNotifyWebhookUrlHelpLink: "Slack help",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
     resolveConflict: "Operator Only: Resolve Conflict",
@@ -799,6 +803,16 @@ export default function SyncConsolePage() {
                 defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
               />
               <small>{t.slackNotifyWebhookUrlHelp}</small>
+              <small>
+                {t.slackNotifyWebhookUrlHowTo}{" "}
+                <a
+                  href="https://api.slack.com/messaging/webhooks"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t.slackNotifyWebhookUrlHelpLink}
+                </a>
+              </small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.errorNotifyEmail}</span>
