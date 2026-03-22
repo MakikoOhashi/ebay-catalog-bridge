@@ -148,6 +148,7 @@ async function notifyRunIssue(input: {
   runId: number;
   status: RunStatus;
   errorNotifyEmail?: string | null;
+  slackNotifyWebhookUrl?: string | null;
   counters: RunCounters;
 }) {
   if (input.status === "succeeded") return;
@@ -158,13 +159,15 @@ async function notifyRunIssue(input: {
     runId: input.runId,
     status: input.status,
     notifyEmail: input.errorNotifyEmail ?? null,
+    notifySlackWebhookConfigured: Boolean(input.slackNotifyWebhookUrl?.trim()),
     counters: input.counters,
     createdAt: new Date().toISOString(),
   };
 
   console.warn("[sync-notify]", JSON.stringify(payload));
 
-  const webhook = process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
+  const webhook =
+    input.slackNotifyWebhookUrl?.trim() || process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
   if (!webhook) return;
 
   const text = [
@@ -2188,6 +2191,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     runId: run.id,
     status: finalStatus,
     errorNotifyEmail: store.errorNotifyEmail,
+    slackNotifyWebhookUrl: store.slackNotifyWebhookUrl,
     counters,
   });
 

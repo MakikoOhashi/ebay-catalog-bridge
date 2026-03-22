@@ -81,6 +81,7 @@ model Store {
   priceAdjustmentFixed Float   @default(0) @map("price_adjustment_fixed")
   roundRule     String       @default("nearest") @map("round_rule")
   errorNotifyEmail String?   @map("error_notify_email")
+  slackNotifyWebhookUrl String? @map("slack_notify_webhook_url")
   ebayAccounts EbayAccount[]
   skuLinks     SkuLink[]
   skuConflicts SkuConflict[]

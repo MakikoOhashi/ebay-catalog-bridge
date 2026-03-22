@@ -12,6 +12,7 @@ type SettingsPayload = {
   priceAdjustmentFixed?: number;
   roundRule?: string;
   errorNotifyEmail?: string | null;
+  slackNotifyWebhookUrl?: string | null;
 };
 
 const allowedSyncFrequencyMinutes = new Set([1440]);
@@ -54,6 +55,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       priceAdjustmentFixed: store.priceAdjustmentFixed,
       roundRule: store.roundRule,
       errorNotifyEmail: store.errorNotifyEmail,
+      slackNotifyWebhookUrl: store.slackNotifyWebhookUrl,
     },
   });
 };
@@ -91,6 +93,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         priceAdjustmentFixed: Number(form.get("priceAdjustmentFixed") || 0),
         roundRule: form.get("roundRule")?.toString() || "nearest",
         errorNotifyEmail: form.get("errorNotifyEmail")?.toString() || null,
+        slackNotifyWebhookUrl: form.get("slackNotifyWebhookUrl")?.toString() || null,
       };
     }
   } catch {
@@ -128,6 +131,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           : store.priceAdjustmentFixed,
       roundRule: body.roundRule?.trim() || store.roundRule,
       errorNotifyEmail: body.errorNotifyEmail?.trim() || null,
+      slackNotifyWebhookUrl: body.slackNotifyWebhookUrl?.trim() || null,
     },
   });
 
@@ -146,6 +150,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       priceAdjustmentFixed: updated.priceAdjustmentFixed,
       roundRule: updated.roundRule,
       errorNotifyEmail: updated.errorNotifyEmail,
+      slackNotifyWebhookUrl: updated.slackNotifyWebhookUrl,
     },
   });
 };

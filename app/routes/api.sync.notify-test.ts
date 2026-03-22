@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
+import db from "../db.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method.toUpperCase() !== "POST") {
@@ -7,14 +8,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   const { session } = await authenticate.admin(request);
-  const webhook = process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
+  const store = await db.store.findUnique({
+    where: { shop: session.shop },
+    select: { slackNotifyWebhookUrl: true },
+  });
+  const webhook =
+    store?.slackNotifyWebhookUrl?.trim() || process.env.ERROR_NOTIFY_WEBHOOK_URL?.trim();
 
   if (!webhook) {
     return Response.json(
       {
         sent: false,
-        error: "missing_error_notify_webhook_url",
-        requiredEnv: "ERROR_NOTIFY_WEBHOOK_URL",
+        error: "missing_slack_webhook_url",
+        required: ["store.slackNotifyWebhookUrl", "ERROR_NOTIFY_WEBHOOK_URL"],
       },
       { status: 400 },
     );

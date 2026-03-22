@@ -110,6 +110,8 @@ const textMap = {
     roundDown: "切り捨て",
     errorNotifyEmail: "通知メール（準備中）",
     errorNotifyEmailHelp: "メール通知はまだ未実装です。現在はSlack通知のみ動作します。",
+    slackNotifyWebhookUrl: "Slack通知Webhook URL",
+    slackNotifyWebhookUrlHelp: "このストア専用のSlack Incoming Webhook URLを設定すると、同期エラー時の通知とテスト通知がこのストアのSlackに届きます。未設定の場合は、共通Webhookがあればそちらが使われます。",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
     resolveConflict: "運用者向け: 競合解消",
@@ -253,6 +255,8 @@ const textMap = {
     roundDown: "Round Down",
     errorNotifyEmail: "Error Notify Email (coming soon)",
     errorNotifyEmailHelp: "Email notifications are not implemented yet. Only Slack notifications are active right now.",
+    slackNotifyWebhookUrl: "Slack Notify Webhook URL",
+    slackNotifyWebhookUrlHelp: "Set a store-specific Slack Incoming Webhook URL to send sync issue alerts and test notifications to this store's Slack. If this is empty, the shared webhook is used when available.",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
     resolveConflict: "Operator Only: Resolve Conflict",
@@ -385,6 +389,7 @@ type SettingsResponsePayload = {
     autoFxLastTargetCurrency?: string | null;
     roundRule: string;
     errorNotifyEmail: string | null;
+    slackNotifyWebhookUrl: string | null;
   };
 };
 
@@ -690,6 +695,7 @@ export default function SyncConsolePage() {
               <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
               <div>{t.roundRule}: {currentSettings.roundRule}</div>
               <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
+              <div>{t.slackNotifyWebhookUrl}: {currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"}</div>
               <div>{t.errorNotifyEmail}: {currentSettings.errorNotifyEmail || "-"}</div>
             </div>
           </s-box>
@@ -783,6 +789,16 @@ export default function SyncConsolePage() {
                 <option value="up">{t.roundUp}</option>
                 <option value="down">{t.roundDown}</option>
               </select>
+            </label>
+            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
+              <span>{t.slackNotifyWebhookUrl}</span>
+              <input
+                type="url"
+                name="slackNotifyWebhookUrl"
+                placeholder="https://hooks.slack.com/services/..."
+                defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+              />
+              <small>{t.slackNotifyWebhookUrlHelp}</small>
             </label>
             <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
               <span>{t.errorNotifyEmail}</span>
