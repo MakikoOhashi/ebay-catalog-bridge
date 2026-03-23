@@ -670,11 +670,35 @@ export default function SyncConsolePage() {
             const isConnected = checkpoint?.status === "connected";
             const accountDisplayName = checkpoint?.ebayUserId?.trim() || slotLabel;
             return (
-              <s-box key={slotLabel} borderWidth="base" borderRadius="base" padding="base" style={{ minWidth: 0 }}>
-                <s-stack direction="block" gap="base">
-                  <span>{t.slot} {index + 1}: {accountDisplayName}</span>
+              <s-box
+                key={slotLabel}
+                borderWidth="base"
+                borderRadius="base"
+                padding="base"
+                style={{ minWidth: 0, height: "100%" }}
+              >
+                <s-stack direction="block" gap="base" style={{ height: "100%", justifyContent: "space-between" }}>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ display: "grid", gap: 4 }}>
+                      <strong>{t.slot} {index + 1}: {accountDisplayName}</strong>
+                      <div>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: "#f1f5f9",
+                            color: "#334155",
+                            fontSize: 12,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          {slotLabel}
+                        </span>
+                      </div>
+                    </div>
                   {checkpoint?.ebayUserId ? (
-                    <small style={{ color: "#666" }}>{slotLabel}</small>
+                    <small style={{ color: "#666" }}>{checkpoint.ebayUserId}</small>
                   ) : null}
                   {isConnected && !checkpoint?.ebayUserId ? (
                     <small style={{ color: "#666", lineHeight: 1.5 }}>{t.accountIdFallbackNote}</small>
@@ -684,24 +708,27 @@ export default function SyncConsolePage() {
                       ? `${t.connected} (#${checkpoint?.ebayAccountId})`
                       : t.notConnected}
                   </s-badge>
-                  <s-button
-                    href={`/api/ebay/oauth/start?label=${encodeURIComponent(slotLabel)}&shop=${encodeURIComponent(shop)}${checkpoint?.ebayAccountId ? `&accountId=${checkpoint.ebayAccountId}` : ""}`}
-                    target="_blank"
-                  >
-                    {t.connect}
-                  </s-button>
-                  {isConnected && checkpoint?.ebayAccountId ? (
-                    <disconnectFetcher.Form method="post" action="/api/ebay/account/disconnect">
-                      <input type="hidden" name="accountId" value={checkpoint.ebayAccountId} />
-                      <s-button
-                        type="submit"
-                        variant="secondary"
-                        {...(disconnectFetcher.state !== "idle" ? { loading: true } : {})}
-                      >
-                        {t.disconnect}
-                      </s-button>
-                    </disconnectFetcher.Form>
-                  ) : null}
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <s-button
+                      href={`/api/ebay/oauth/start?label=${encodeURIComponent(slotLabel)}&shop=${encodeURIComponent(shop)}${checkpoint?.ebayAccountId ? `&accountId=${checkpoint.ebayAccountId}` : ""}`}
+                      target="_blank"
+                    >
+                      {t.connect}
+                    </s-button>
+                    {isConnected && checkpoint?.ebayAccountId ? (
+                      <disconnectFetcher.Form method="post" action="/api/ebay/account/disconnect">
+                        <input type="hidden" name="accountId" value={checkpoint.ebayAccountId} />
+                        <s-button
+                          type="submit"
+                          variant="secondary"
+                          {...(disconnectFetcher.state !== "idle" ? { loading: true } : {})}
+                        >
+                          {t.disconnect}
+                        </s-button>
+                      </disconnectFetcher.Form>
+                    ) : null}
+                  </div>
                 </s-stack>
               </s-box>
             );
