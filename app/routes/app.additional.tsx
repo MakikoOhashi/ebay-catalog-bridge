@@ -1,6 +1,14 @@
 export default function SettingsPage() {
   return (
     <s-page heading="Settings">
+      <s-box borderWidth="base" borderRadius="base" padding="base">
+        <s-stack direction="block" gap="tight">
+          <strong>This is the Settings page.</strong>
+          <s-paragraph>
+            If you want to run eBay sync jobs, move to <s-link href="/app/sync">Sync Console</s-link>.
+          </s-paragraph>
+        </s-stack>
+      </s-box>
       <s-section heading="How to use this app">
         <s-stack direction="block" gap="base">
           <s-paragraph>
