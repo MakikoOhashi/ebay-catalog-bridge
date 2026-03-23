@@ -17,6 +17,15 @@ export default function SettingsPage() {
           </s-paragraph>
           <s-box borderWidth="base" borderRadius="base" padding="base">
             <s-stack direction="block" gap="tight">
+              <strong>Sync direction</strong>
+              <s-paragraph>
+                This app is one-way only: eBay to Shopify. Sales or product changes
+                made in Shopify are not pushed back to eBay.
+              </s-paragraph>
+            </s-stack>
+          </s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">
+            <s-stack direction="block" gap="tight">
               <strong>Sync key</strong>
               <s-paragraph>
                 Products are created and updated by SKU. If the same SKU appears in
