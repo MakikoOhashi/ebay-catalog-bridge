@@ -19,7 +19,7 @@ export default function App() {
     <AppProvider embedded apiKey={apiKey}>
       <ui-nav-menu>
         <s-link href="/app/sync">Sync Console</s-link>
-        <s-link href="/app/additional">Settings</s-link>
+        <s-link href="/app/settings">Settings</s-link>
       </ui-nav-menu>
       <Outlet />
     </AppProvider>
