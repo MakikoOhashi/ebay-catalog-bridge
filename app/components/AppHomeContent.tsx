@@ -116,7 +116,7 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
         <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
       </div>
 
-      <s-stack direction="block" gap="tight">
+      <s-stack direction="block" gap="tight" style={{ marginBottom: 20 }}>
         <strong>{introTitle}</strong>
         <s-paragraph>{introBody}</s-paragraph>
         <div>
