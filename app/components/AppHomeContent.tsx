@@ -116,15 +116,13 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
         <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
       </div>
 
-      <s-box borderWidth="base" borderRadius="base" padding="base">
-        <s-stack direction="block" gap="tight">
-          <strong>{introTitle}</strong>
-          <s-paragraph>{introBody}</s-paragraph>
-          <div>
-            <s-link href="/app/sync">{t.syncConsoleLinkText}</s-link>
-          </div>
-        </s-stack>
-      </s-box>
+      <s-stack direction="block" gap="tight">
+        <strong>{introTitle}</strong>
+        <s-paragraph>{introBody}</s-paragraph>
+        <div>
+          <s-link href="/app/sync">{t.syncConsoleLinkText}</s-link>
+        </div>
+      </s-stack>
 
       <s-section heading={t.rulesHeading}>
         <s-stack direction="block" gap="base">
