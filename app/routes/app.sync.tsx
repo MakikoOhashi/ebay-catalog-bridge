@@ -771,124 +771,131 @@ export default function SyncConsolePage() {
         ) : null}
         <settingsSaveFetcher.Form method="post" action="/api/settings">
           <s-stack direction="block" gap="base">
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.syncFrequency}</span>
-              <input type="hidden" name="syncFrequencyMinutes" value="1440" />
-              <input type="text" value={t.nightlyBatch} disabled />
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.syncFields}</span>
-              <div style={{ display: "grid", gap: 6 }}>
-                {syncFieldOptions.map((option) => (
-                  <label key={option.value} style={{ display: "inline-flex", gap: 8 }}>
+            <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
+              <div style={{ display: "grid", gap: 16 }}>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.syncFrequency}</span>
+                  <input type="hidden" name="syncFrequencyMinutes" value="1440" />
+                  <input type="text" value={t.nightlyBatch} disabled />
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.syncFields}</span>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {syncFieldOptions.map((option) => (
+                      <label key={option.value} style={{ display: "inline-flex", gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          name="syncFields"
+                          value={option.value}
+                          defaultChecked={
+                            currentSettings?.syncFields?.includes(option.value) ??
+                            true
+                          }
+                        />
+                        <span>{t[option.labelKey]}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <small>{t.syncFieldsHelp}</small>
+                  <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.fxRateMode}</span>
+                  <select
+                    name="fxRateMode"
+                    value={selectedFxRateMode}
+                    onChange={(event) =>
+                      setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
+                    }
+                  >
+                    <option value="fixed">{t.fxModeFixed}</option>
+                    <option value="auto">{t.fxModeAuto}</option>
+                  </select>
+                  <small>{t.fxModeHelp}</small>
+                  {selectedFxRateMode === "auto" ? (
+                    <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
+                  ) : null}
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.fixedFxRate}</span>
+                  {selectedFxRateMode === "auto" ? (
                     <input
-                      type="checkbox"
-                      name="syncFields"
-                      value={option.value}
-                      defaultChecked={
-                        currentSettings?.syncFields?.includes(option.value) ??
-                        true
-                      }
+                      type="hidden"
+                      name="fixedFxRate"
+                      value={currentSettings?.fixedFxRate ?? 150}
                     />
-                    <span>{t[option.labelKey]}</span>
-                  </label>
-                ))}
+                  ) : null}
+                  <input
+                    type="number"
+                    name="fixedFxRate"
+                    step="0.01"
+                    defaultValue={currentSettings?.fixedFxRate ?? 150}
+                    disabled={selectedFxRateMode === "auto"}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.roundRule}</span>
+                  <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
+                    <option value="nearest">{t.roundNearest}</option>
+                    <option value="up">{t.roundUp}</option>
+                    <option value="down">{t.roundDown}</option>
+                  </select>
+                </label>
               </div>
-              <small>{t.syncFieldsHelp}</small>
-              <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.fxRateMode}</span>
-              <select
-                name="fxRateMode"
-                value={selectedFxRateMode}
-                onChange={(event) =>
-                  setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
-                }
-              >
-                <option value="fixed">{t.fxModeFixed}</option>
-                <option value="auto">{t.fxModeAuto}</option>
-              </select>
-              <small>{t.fxModeHelp}</small>
-              {selectedFxRateMode === "auto" ? (
-                <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
-              ) : null}
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.fixedFxRate}</span>
-              {selectedFxRateMode === "auto" ? (
-                <input
-                  type="hidden"
-                  name="fixedFxRate"
-                  value={currentSettings?.fixedFxRate ?? 150}
-                />
-              ) : null}
-              <input
-                type="number"
-                name="fixedFxRate"
-                step="0.01"
-                defaultValue={currentSettings?.fixedFxRate ?? 150}
-                disabled={selectedFxRateMode === "auto"}
-              />
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.priceAdjustmentPercent}</span>
-              <input
-                type="number"
-                name="priceAdjustmentPercent"
-                step="0.01"
-                defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
-              />
-              <small>{t.priceAdjustmentPercentHelp}</small>
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.priceAdjustmentFixed}</span>
-              <input
-                type="number"
-                name="priceAdjustmentFixed"
-                step="0.01"
-                defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
-              />
-              <small>{t.priceAdjustmentFixedHelp}</small>
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.roundRule}</span>
-              <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
-                <option value="nearest">{t.roundNearest}</option>
-                <option value="up">{t.roundUp}</option>
-                <option value="down">{t.roundDown}</option>
-              </select>
-            </label>
-            <label style={{ display: "grid", gap: 4, maxWidth: 360 }}>
-              <span>{t.slackNotifyWebhookUrl}</span>
-              <input
-                type="url"
-                name="slackNotifyWebhookUrl"
-                placeholder="https://hooks.slack.com/services/..."
-                defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
-              />
-              <small>{t.slackNotifyWebhookUrlHelp}</small>
-              <small>
-                {t.slackNotifyWebhookUrlHowTo}{" "}
-                <a
-                  href="https://api.slack.com/messaging/webhooks"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t.slackNotifyWebhookUrlHelpLink}
-                </a>
-              </small>
-            </label>
-            <label style={{ display: "inline-flex", gap: 8 }}>
-              <input type="hidden" name="priceSyncEnabled" value="false" />
-              <input
-                type="checkbox"
-                name="priceSyncEnabled"
-                value="true"
-                defaultChecked={currentSettings?.priceSyncEnabled ?? false}
-              />
-              <span>{t.enablePriceSync}</span>
-            </label>
+
+              <div style={{ display: "grid", gap: 16 }}>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.priceAdjustmentPercent}</span>
+                  <input
+                    type="number"
+                    name="priceAdjustmentPercent"
+                    step="0.01"
+                    defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+                  />
+                  <small>{t.priceAdjustmentPercentHelp}</small>
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.priceAdjustmentFixed}</span>
+                  <input
+                    type="number"
+                    name="priceAdjustmentFixed"
+                    step="0.01"
+                    defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+                  />
+                  <small>{t.priceAdjustmentFixedHelp}</small>
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.slackNotifyWebhookUrl}</span>
+                  <input
+                    type="url"
+                    name="slackNotifyWebhookUrl"
+                    placeholder="https://hooks.slack.com/services/..."
+                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+                  />
+                  <small>{t.slackNotifyWebhookUrlHelp}</small>
+                  <small>
+                    {t.slackNotifyWebhookUrlHowTo}{" "}
+                    <a
+                      href="https://api.slack.com/messaging/webhooks"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t.slackNotifyWebhookUrlHelpLink}
+                    </a>
+                  </small>
+                </label>
+                <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                  <input type="hidden" name="priceSyncEnabled" value="false" />
+                  <input
+                    type="checkbox"
+                    name="priceSyncEnabled"
+                    value="true"
+                    defaultChecked={currentSettings?.priceSyncEnabled ?? false}
+                  />
+                  <span>{t.enablePriceSync}</span>
+                </label>
+              </div>
+            </div>
             <s-button type="submit" {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
           </s-stack>
         </settingsSaveFetcher.Form>
