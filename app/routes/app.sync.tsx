@@ -664,13 +664,13 @@ export default function SyncConsolePage() {
         <div style={{ marginTop: 12, marginBottom: 12 }}>
           <s-button onClick={refreshAll}>{t.refreshStatus}</s-button>
         </div>
-        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
+        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
           {accountSlots.map((slotLabel, index) => {
             const checkpoint = checkpointByLabel.get(slotLabel);
             const isConnected = checkpoint?.status === "connected";
             const accountDisplayName = checkpoint?.ebayUserId?.trim() || slotLabel;
             return (
-              <s-box key={slotLabel} borderWidth="base" borderRadius="base" padding="base">
+              <s-box key={slotLabel} borderWidth="base" borderRadius="base" padding="base" style={{ minWidth: 0 }}>
                 <s-stack direction="block" gap="base">
                   <span>{t.slot} {index + 1}: {accountDisplayName}</span>
                   {checkpoint?.ebayUserId ? (
