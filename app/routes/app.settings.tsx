@@ -25,6 +25,12 @@ const textMap = {
     notificationsBody: "Slack 通知は任意です。ストア専用の Slack Incoming Webhook URL を設定すると、同期エラー通知とテスト通知をそのストアの Slack に送れます。",
     contactHeading: "問い合わせ先",
     contactBody: "サポート先や運用メモをここに追加していく想定です。",
+    contactFormHeading: "お問い合わせフォーム",
+    contactName: "お名前",
+    contactEmail: "メールアドレス",
+    contactMessage: "お問い合わせ内容",
+    contactUpload: "ファイル添付",
+    contactSubmit: "送信",
   },
   en: {
     pageHeading: "Settings",
@@ -45,6 +51,12 @@ const textMap = {
     notificationsBody: "Slack notifications are optional. If a store-specific Slack Incoming Webhook URL is set, sync issue alerts and test alerts can be sent to that store's Slack.",
     contactHeading: "Support",
     contactBody: "This area can be used later for support details and operating notes.",
+    contactFormHeading: "Contact form",
+    contactName: "Name",
+    contactEmail: "Email address",
+    contactMessage: "Message",
+    contactUpload: "Upload file",
+    contactSubmit: "Send",
   },
 } as const;
 
@@ -135,9 +147,41 @@ export default function SettingsPage() {
       </s-section>
 
       <s-section heading={t.contactHeading}>
-        <s-box borderWidth="base" borderRadius="base" padding="base">
-          <s-paragraph>{t.contactBody}</s-paragraph>
-        </s-box>
+        <s-stack direction="block" gap="base">
+          <s-box borderWidth="base" borderRadius="base" padding="base">
+            <s-paragraph>{t.contactBody}</s-paragraph>
+          </s-box>
+
+          <s-box borderWidth="base" borderRadius="base" padding="base">
+            <s-stack direction="block" gap="base">
+              <strong>{t.contactFormHeading}</strong>
+
+              <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
+                <span>{t.contactName}</span>
+                <input type="text" />
+              </label>
+
+              <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
+                <span>{t.contactEmail}</span>
+                <input type="email" />
+              </label>
+
+              <label style={{ display: "grid", gap: 4, maxWidth: 720 }}>
+                <span>{t.contactMessage}</span>
+                <textarea rows={8} />
+              </label>
+
+              <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
+                <span>{t.contactUpload}</span>
+                <input type="file" />
+              </label>
+
+              <div>
+                <s-button>{t.contactSubmit}</s-button>
+              </div>
+            </s-stack>
+          </s-box>
+        </s-stack>
       </s-section>
     </s-page>
   );
