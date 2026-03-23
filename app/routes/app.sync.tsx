@@ -770,7 +770,7 @@ export default function SyncConsolePage() {
           </s-box>
         ) : null}
         <settingsSaveFetcher.Form method="post" action="/api/settings">
-          <s-stack direction="block" gap="base">
+          <s-stack direction="block" gap="base" style={{ marginTop: 20 }}>
             <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
               <div style={{ display: "grid", gap: 16 }}>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
