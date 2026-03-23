@@ -29,10 +29,12 @@ const textMap = {
     connectEbay: "eBayアカウント接続",
     accountConnections: "eBayアカウント接続（最大4）",
     accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。同期された商品には、eBay ID のタグが自動で付きます。",
-    syncDirectionTitle: "同期方向は eBay → Shopify のみです",
-    syncDirectionDesc: "Shopifyで売れても、eBayの在庫数は自動では変わりません。Shopifyで編集した内容も、eBayには反映されません。",
-    skuSyncRuleTitle: "SKUが同期の基準です",
-    skuSyncRuleDesc: "このアプリはSKUを軸に商品を作成・更新します。別のeBayアカウントに同じSKUがある場合は自動で重複作成せず、競合として止めます。",
+    syncDirectionTitle: "同期方向",
+    syncDirectionLead: "eBay → Shopify",
+    syncDirectionDesc: "Shopify → eBay はしません",
+    skuSyncRuleTitle: "同期の基準",
+    skuSyncRuleLead: "SKU で同期",
+    skuSyncRuleDesc: "同じSKUが別アカウントにある場合は競合で停止します",
     slot: "スロット",
     connect: "接続",
     disconnect: "解除",
@@ -178,10 +180,12 @@ const textMap = {
     connectEbay: "Connect eBay Account",
     accountConnections: "eBay Account Connections (max 4)",
     accountConnectionsDesc: "Manage which eBay accounts are linked to this Shopify store. In normal use, only connect accounts that actually own products. Synced products automatically receive an eBay ID tag.",
-    syncDirectionTitle: "Sync direction is eBay -> Shopify only",
-    syncDirectionDesc: "Sales or product changes made in Shopify are not pushed back to eBay. eBay remains the source of truth and Shopify is updated from it.",
-    skuSyncRuleTitle: "SKU is the sync key",
-    skuSyncRuleDesc: "This app creates and updates products by SKU. If the same SKU appears in another eBay account, it won't create a duplicate automatically and will stop as a conflict instead.",
+    syncDirectionTitle: "Sync direction",
+    syncDirectionLead: "eBay → Shopify",
+    syncDirectionDesc: "Shopify → eBay is not supported",
+    skuSyncRuleTitle: "Sync key",
+    skuSyncRuleLead: "Sync by SKU",
+    skuSyncRuleDesc: "If the same SKU appears in another account, it stops as a conflict",
     slot: "Slot",
     connect: "Connect",
     disconnect: "Disconnect",
@@ -648,14 +652,22 @@ export default function SyncConsolePage() {
 
       <s-section heading={t.step1}>
         <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <strong>{t.syncDirectionTitle}</strong>
-          <div style={{ marginTop: 6, lineHeight: 1.6 }}>{t.syncDirectionDesc}</div>
-        </s-box>
-        <s-box padding="base" borderWidth="base" borderRadius="base">
-          <strong>{t.skuSyncRuleTitle}</strong>
-          <div style={{ marginTop: 6, lineHeight: 1.6 }}>{t.skuSyncRuleDesc}</div>
-        </s-box>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <s-stack direction="block" gap="tight">
+              <strong>{t.syncDirectionTitle}</strong>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{t.syncDirectionLead}</div>
+              <s-paragraph>{t.syncDirectionDesc}</s-paragraph>
+            </s-stack>
+          </s-box>
+          <s-box padding="base" borderWidth="base" borderRadius="base">
+            <s-stack direction="block" gap="tight">
+              <strong>{t.skuSyncRuleTitle}</strong>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{t.skuSyncRuleLead}</div>
+              <s-paragraph>{t.skuSyncRuleDesc}</s-paragraph>
+            </s-stack>
+          </s-box>
+        </div>
         <div style={{ marginBottom: 12 }}>
           {lang === "ja"
             ? `現在の接続数: ${activeConnectedCount} / 4`
