@@ -125,7 +125,7 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
       </s-stack>
 
       <s-section heading={t.rulesHeading}>
-        <s-stack direction="block" gap="base">
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
           <s-box borderWidth="base" borderRadius="base" padding="base">
             <s-stack direction="block" gap="tight">
               <strong>{t.syncDirectionTitle}</strong>
@@ -157,7 +157,7 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
               <s-paragraph>{t.notificationsBody}</s-paragraph>
             </s-stack>
           </s-box>
-        </s-stack>
+        </div>
       </s-section>
 
       <s-section heading={t.contactHeading}>
