@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 
 type Lang = "ja" | "en";
+type Variant = "home" | "settings";
 
 const textMap = {
   ja: {
-    pageHeading: "Top",
+    pageHeadingHome: "Top",
+    pageHeadingSettings: "Settings",
     loading: "読み込み中...",
     japanese: "日本語",
     english: "English",
-    introTitle: "このページについて",
-    introBody: "Sync Console は日々の同期運用に使います。このページは、このアプリの前提ルールや問い合わせ先を確認するためのトップページです。",
+    introTitleHome: "このページについて",
+    introTitleSettings: "Settings について",
+    introBodyHome: "Sync Console は日々の同期運用に使います。このページは、このアプリの前提ルールや問い合わせ先を確認するためのトップページです。",
+    introBodySettings: "Sync Console は日々の同期運用に使います。このページでは、このアプリの前提ルールや問い合わせ先を確認できます。",
     syncConsoleLinkText: "Sync Console を開く",
     rulesHeading: "運用ルール",
     syncDirectionTitle: "同期方向",
@@ -33,12 +37,15 @@ const textMap = {
     contactSubmit: "送信",
   },
   en: {
-    pageHeading: "Top",
+    pageHeadingHome: "Top",
+    pageHeadingSettings: "Settings",
     loading: "Loading...",
     japanese: "日本語",
     english: "English",
-    introTitle: "About this page",
-    introBody: "Use Sync Console for daily sync operations. This page is the top page for this app's operating rules and support information.",
+    introTitleHome: "About this page",
+    introTitleSettings: "About Settings",
+    introBodyHome: "Use Sync Console for daily sync operations. This page is the top page for this app's operating rules and support information.",
+    introBodySettings: "Use Sync Console for daily sync operations. This page is for the operating rules and support information of this app.",
     syncConsoleLinkText: "Open Sync Console",
     rulesHeading: "Operating rules",
     syncDirectionTitle: "Sync direction",
@@ -63,7 +70,7 @@ const textMap = {
   },
 } as const;
 
-export function AppHomeContent() {
+export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
   const [lang, setLang] = useState<Lang>("ja");
   const [clientReady, setClientReady] = useState(false);
 
@@ -86,6 +93,9 @@ export function AppHomeContent() {
   };
 
   const t = textMap[lang];
+  const pageHeading = variant === "home" ? t.pageHeadingHome : t.pageHeadingSettings;
+  const introTitle = variant === "home" ? t.introTitleHome : t.introTitleSettings;
+  const introBody = variant === "home" ? t.introBodyHome : t.introBodySettings;
 
   if (!clientReady) {
     return (
@@ -96,7 +106,7 @@ export function AppHomeContent() {
   }
 
   return (
-    <s-page heading={t.pageHeading}>
+    <s-page heading={pageHeading}>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
         <s-button variant={lang === "ja" ? "primary" : "secondary"} onClick={() => switchLang("ja")}>{t.japanese}</s-button>
         <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
@@ -104,8 +114,8 @@ export function AppHomeContent() {
 
       <s-box borderWidth="base" borderRadius="base" padding="base">
         <s-stack direction="block" gap="tight">
-          <strong>{t.introTitle}</strong>
-          <s-paragraph>{t.introBody}</s-paragraph>
+          <strong>{introTitle}</strong>
+          <s-paragraph>{introBody}</s-paragraph>
           <div>
             <s-link href="/app/sync">{t.syncConsoleLinkText}</s-link>
           </div>

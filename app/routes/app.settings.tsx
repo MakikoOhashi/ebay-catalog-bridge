@@ -1,15 +1,13 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { redirect } from "react-router";
+import { AppHomeContent } from "../components/AppHomeContent";
 
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  const url = new URL(request.url);
-  const search = url.search || "";
-  throw redirect(`/app${search}`);
+  return null;
 };
 
 export default function SettingsPage() {
-  return null;
+  return <AppHomeContent variant="settings" />;
 }
