@@ -1,14 +1,12 @@
 import type { LoaderFunctionArgs } from "react-router";
-import { redirect } from "react-router";
 import { authenticate } from "../shopify.server";
+import { AppHomeContent } from "../components/AppHomeContent";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  const url = new URL(request.url);
-  const search = url.search || "";
-  throw redirect(`/app/sync${search}`);
+  return null;
 };
 
 export default function AppIndexPage() {
-  return null;
+  return <AppHomeContent />;
 }
