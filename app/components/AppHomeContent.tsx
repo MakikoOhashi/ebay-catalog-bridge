@@ -30,7 +30,7 @@ const textMap = {
     notificationsLead: "Slack 通知は任意",
     notificationsBody: "Webhook を設定したストアだけ通知します",
     contactHeading: "問い合わせ先",
-    contactFormHeading: "お問い合わせフォーム",
+    contactIntro: "ご不明点はこちらへお問い合わせください。",
     contactName: "お名前",
     contactEmail: "メールアドレス",
     contactMessage: "お問い合わせ内容",
@@ -62,7 +62,7 @@ const textMap = {
     notificationsLead: "Slack is optional",
     notificationsBody: "Only stores with a webhook set receive notifications",
     contactHeading: "Support",
-    contactFormHeading: "Contact form",
+    contactIntro: "If you have any questions, please contact us here.",
     contactName: "Name",
     contactEmail: "Email address",
     contactMessage: "Message",
@@ -166,7 +166,7 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
         <contactFetcher.Form method="post" action="/api/contact" encType="multipart/form-data">
           <s-box borderWidth="base" borderRadius="base" padding="base">
             <s-stack direction="block" gap="base">
-            <strong>{t.contactFormHeading}</strong>
+            <s-paragraph>{t.contactIntro}</s-paragraph>
 
             <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
               <span>{t.contactName}</span>
