@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useFetcher } from "react-router";
 
 type Lang = "ja" | "en";
 type Variant = "home" | "settings";
@@ -73,6 +74,7 @@ const textMap = {
 export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
   const [lang, setLang] = useState<Lang>("ja");
   const [clientReady, setClientReady] = useState(false);
+  const contactFetcher = useFetcher<{ ok?: boolean; error?: string; message?: string }>();
 
   useEffect(() => {
     setClientReady(true);
@@ -96,6 +98,8 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
   const pageHeading = variant === "home" ? t.pageHeadingHome : t.pageHeadingSettings;
   const introTitle = variant === "home" ? t.introTitleHome : t.introTitleSettings;
   const introBody = variant === "home" ? t.introBodyHome : t.introBodySettings;
+  const contactState = contactFetcher.state;
+  const contactResult = contactFetcher.data;
 
   if (!clientReady) {
     return (
@@ -159,35 +163,46 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
       </s-section>
 
       <s-section heading={t.contactHeading}>
-        <s-box borderWidth="base" borderRadius="base" padding="base">
-          <s-stack direction="block" gap="base">
+        <contactFetcher.Form method="post" action="/api/contact" encType="multipart/form-data">
+          <s-box borderWidth="base" borderRadius="base" padding="base">
+            <s-stack direction="block" gap="base">
             <strong>{t.contactFormHeading}</strong>
 
             <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
               <span>{t.contactName}</span>
-              <input type="text" />
+              <input type="text" name="name" required />
             </label>
 
             <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
               <span>{t.contactEmail}</span>
-              <input type="email" />
+              <input type="email" name="email" required />
             </label>
 
             <label style={{ display: "grid", gap: 4, maxWidth: 720 }}>
               <span>{t.contactMessage}</span>
-              <textarea rows={8} />
+              <textarea name="message" rows={8} required />
             </label>
 
             <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
               <span>{t.contactUpload}</span>
-              <input type="file" />
+              <input type="file" name="attachment" />
             </label>
 
+            {contactResult?.message ? (
+              <div style={{ color: "#166534", lineHeight: 1.6 }}>{contactResult.message}</div>
+            ) : null}
+            {contactResult?.error ? (
+              <div style={{ color: "#b91c1c", lineHeight: 1.6 }}>{contactResult.error}</div>
+            ) : null}
+
             <div>
-              <s-button>{t.contactSubmit}</s-button>
+              <s-button type="submit" {...(contactState !== "idle" ? { loading: true } : {})}>
+                {t.contactSubmit}
+              </s-button>
             </div>
-          </s-stack>
-        </s-box>
+            </s-stack>
+          </s-box>
+        </contactFetcher.Form>
       </s-section>
     </s-page>
   );
