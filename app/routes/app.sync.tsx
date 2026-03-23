@@ -30,7 +30,7 @@ const textMap = {
     accountConnections: "eBayアカウント接続（最大4）",
     accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。同期された商品には、eBay ID のタグが自動で付きます。",
     syncDirectionTitle: "同期方向は eBay → Shopify のみです",
-    syncDirectionDesc: "Shopifyで売れた在庫や商品変更は eBay に戻しません。eBay側を基準データとして Shopify に反映します。",
+    syncDirectionDesc: "Shopifyで売れても、eBayの在庫数は自動では変わりません。Shopifyで編集した内容も、eBayには反映されません。",
     skuSyncRuleTitle: "SKUが同期の基準です",
     skuSyncRuleDesc: "このアプリはSKUを軸に商品を作成・更新します。別のeBayアカウントに同じSKUがある場合は自動で重複作成せず、競合として止めます。",
     slot: "スロット",

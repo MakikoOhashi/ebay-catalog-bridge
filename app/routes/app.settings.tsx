@@ -19,8 +19,9 @@ export default function SettingsPage() {
             <s-stack direction="block" gap="tight">
               <strong>Sync direction</strong>
               <s-paragraph>
-                This app is one-way only: eBay to Shopify. Sales or product changes
-                made in Shopify are not pushed back to eBay.
+                This app is one-way only: eBay to Shopify. Shopify sales do not
+                automatically change eBay inventory, and Shopify-side edits are not
+                pushed back to eBay.
               </s-paragraph>
             </s-stack>
           </s-box>
