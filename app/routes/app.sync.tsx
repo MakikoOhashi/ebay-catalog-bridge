@@ -668,10 +668,9 @@ export default function SyncConsolePage() {
             </s-stack>
           </s-box>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          {lang === "ja"
-            ? `現在の接続数: ${activeConnectedCount} / 4`
-            : `Connected now: ${activeConnectedCount} / 4`}
+        <div style={{ marginBottom: 12, color: "#64748b", fontSize: 13, lineHeight: 1.6 }}>
+          {lang === "ja" ? "現在の接続数:" : "Connected now:"}{" "}
+          <span style={{ color: "#0f172a", fontWeight: 700 }}>{activeConnectedCount} / 4</span>
         </div>
         <div style={{ marginTop: 12, marginBottom: 12 }}>
           <s-button onClick={refreshAll}>{t.refreshStatus}</s-button>
