@@ -18,8 +18,7 @@ export default function App() {
   return (
     <AppProvider embedded apiKey={apiKey}>
       <ui-nav-menu>
-        <s-link href="/app">Home</s-link>
-        <s-link href="/app/additional">Additional page</s-link>
+        <s-link href="/app/additional">Settings</s-link>
         <s-link href="/app/sync">Sync Console</s-link>
       </ui-nav-menu>
       <Outlet />
