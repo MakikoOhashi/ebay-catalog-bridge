@@ -44,13 +44,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
-  const to = process.env.CONTACT_TO_EMAIL?.trim();
 
-  if (!apiKey || !from || !to) {
+  if (!apiKey) {
     return Response.json(
       {
-        error: "Contact form is not configured yet. Set RESEND_API_KEY, RESEND_FROM_EMAIL, and CONTACT_TO_EMAIL.",
+        error: "Contact form is not configured yet. Set RESEND_API_KEY.",
       },
       { status: 500 },
     );
@@ -98,8 +96,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from,
-      to: [to],
+      from: "onboarding@resend.dev",
+      to: ["makiron19831014@gmail.com"],
       reply_to: email,
       subject,
       text,
