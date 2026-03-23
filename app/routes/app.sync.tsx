@@ -29,6 +29,8 @@ const textMap = {
     connectEbay: "eBayアカウント接続",
     accountConnections: "eBayアカウント接続（最大4）",
     accountConnectionsDesc: "どのeBayアカウントをShopifyストアに紐づけるかを管理します。通常は商品を持っているアカウントだけ接続してください。同期された商品には、eBay ID のタグが自動で付きます。",
+    skuSyncRuleTitle: "SKUが同期の基準です",
+    skuSyncRuleDesc: "このアプリはSKUを軸に商品を作成・更新します。別のeBayアカウントに同じSKUがある場合は自動で重複作成せず、競合として止めます。",
     slot: "スロット",
     connect: "接続",
     disconnect: "解除",
@@ -174,6 +176,8 @@ const textMap = {
     connectEbay: "Connect eBay Account",
     accountConnections: "eBay Account Connections (max 4)",
     accountConnectionsDesc: "Manage which eBay accounts are linked to this Shopify store. In normal use, only connect accounts that actually own products. Synced products automatically receive an eBay ID tag.",
+    skuSyncRuleTitle: "SKU is the sync key",
+    skuSyncRuleDesc: "This app creates and updates products by SKU. If the same SKU appears in another eBay account, it won't create a duplicate automatically and will stop as a conflict instead.",
     slot: "Slot",
     connect: "Connect",
     disconnect: "Disconnect",
@@ -640,6 +644,10 @@ export default function SyncConsolePage() {
 
       <s-section heading={t.step1}>
         <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
+        <s-box padding="base" borderWidth="base" borderRadius="base">
+          <strong>{t.skuSyncRuleTitle}</strong>
+          <div style={{ marginTop: 6, lineHeight: 1.6 }}>{t.skuSyncRuleDesc}</div>
+        </s-box>
         <div style={{ marginBottom: 12 }}>
           {lang === "ja"
             ? `現在の接続数: ${activeConnectedCount} / 4`
