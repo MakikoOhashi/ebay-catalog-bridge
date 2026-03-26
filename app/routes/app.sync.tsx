@@ -441,6 +441,7 @@ export default function SyncConsolePage() {
   const [testItems, setTestItems] = useState<TestItemDraft[]>([createEmptyTestItem()]);
   const [advancedItemsJson, setAdvancedItemsJson] = useState("");
   const [selectedFxRateMode, setSelectedFxRateMode] = useState<"fixed" | "auto">("fixed");
+  const [priceSyncEnabledDraft, setPriceSyncEnabledDraft] = useState(false);
   const [manualSyncAccountIds, setManualSyncAccountIds] = useState<string[]>([]);
   const [manualFullScanComplete, setManualFullScanComplete] = useState(false);
   const [manualSyncResult, setManualSyncResult] = useState<unknown>(null);
@@ -550,6 +551,10 @@ export default function SyncConsolePage() {
       setSelectedFxRateMode(currentSettings.fxRateMode);
     }
   }, [currentSettings?.fxRateMode]);
+
+  useEffect(() => {
+    setPriceSyncEnabledDraft(currentSettings?.priceSyncEnabled ?? false);
+  }, [currentSettings?.priceSyncEnabled]);
 
   useEffect(() => {
     const connectedIds = connectedCheckpoints.map((checkpoint) => String(checkpoint.ebayAccountId));
@@ -831,72 +836,82 @@ export default function SyncConsolePage() {
                     type="checkbox"
                     name="priceSyncEnabled"
                     value="true"
-                    defaultChecked={currentSettings?.priceSyncEnabled ?? false}
+                    checked={priceSyncEnabledDraft}
+                    onChange={(event) => setPriceSyncEnabledDraft(event.currentTarget.checked)}
                   />
                   <span>{t.enablePriceSync}</span>
                 </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.fxRateMode}</span>
-                  <select
-                    name="fxRateMode"
-                    value={selectedFxRateMode}
-                    onChange={(event) =>
-                      setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
-                    }
-                  >
-                    <option value="fixed">{t.fxModeFixed}</option>
-                    <option value="auto">{t.fxModeAuto}</option>
-                  </select>
-                  <small>{t.fxModeHelp}</small>
-                  {selectedFxRateMode === "auto" ? (
-                    <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
-                  ) : null}
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.fixedFxRate}</span>
-                  {selectedFxRateMode === "auto" ? (
-                    <input
-                      type="hidden"
-                      name="fixedFxRate"
-                      value={currentSettings?.fixedFxRate ?? 150}
-                    />
-                  ) : null}
-                  <input
-                    type="number"
-                    name="fixedFxRate"
-                    step="0.01"
-                    defaultValue={currentSettings?.fixedFxRate ?? 150}
-                    disabled={selectedFxRateMode === "auto"}
-                  />
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.priceAdjustmentPercent}</span>
-                  <input
-                    type="number"
-                    name="priceAdjustmentPercent"
-                    step="0.01"
-                    defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
-                  />
-                  <small>{t.priceAdjustmentPercentHelp}</small>
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.priceAdjustmentFixed}</span>
-                  <input
-                    type="number"
-                    name="priceAdjustmentFixed"
-                    step="0.01"
-                    defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
-                  />
-                  <small>{t.priceAdjustmentFixedHelp}</small>
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.roundRule}</span>
-                  <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
-                    <option value="nearest">{t.roundNearest}</option>
-                    <option value="up">{t.roundUp}</option>
-                    <option value="down">{t.roundDown}</option>
-                  </select>
-                </label>
+                <div style={{ display: priceSyncEnabledDraft ? "grid" : "none", gap: 16 }}>
+                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                      <span>{t.fxRateMode}</span>
+                      <select
+                        name="fxRateMode"
+                        value={selectedFxRateMode}
+                        onChange={(event) =>
+                          setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
+                        }
+                      >
+                        <option value="fixed">{t.fxModeFixed}</option>
+                        <option value="auto">{t.fxModeAuto}</option>
+                      </select>
+                      <small>{t.fxModeHelp}</small>
+                      {selectedFxRateMode === "auto" ? (
+                        <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
+                      ) : null}
+                  </label>
+                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                      <span>{t.fixedFxRate}</span>
+                      {selectedFxRateMode === "auto" ? (
+                        <input
+                          type="hidden"
+                          name="fixedFxRate"
+                          value={currentSettings?.fixedFxRate ?? 150}
+                        />
+                      ) : null}
+                      <input
+                        type="number"
+                        name="fixedFxRate"
+                        step="0.01"
+                        defaultValue={currentSettings?.fixedFxRate ?? 150}
+                        disabled={selectedFxRateMode === "auto"}
+                      />
+                  </label>
+                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                      <span>{t.priceAdjustmentPercent}</span>
+                      <input
+                        type="number"
+                        name="priceAdjustmentPercent"
+                        step="0.01"
+                        defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+                      />
+                      <small>{t.priceAdjustmentPercentHelp}</small>
+                  </label>
+                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                      <span>{t.priceAdjustmentFixed}</span>
+                      <input
+                        type="number"
+                        name="priceAdjustmentFixed"
+                        step="0.01"
+                        defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+                      />
+                      <small>{t.priceAdjustmentFixedHelp}</small>
+                  </label>
+                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                      <span>{t.roundRule}</span>
+                      <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
+                        <option value="nearest">{t.roundNearest}</option>
+                        <option value="up">{t.roundUp}</option>
+                        <option value="down">{t.roundDown}</option>
+                      </select>
+                  </label>
+                </div>
+                {!priceSyncEnabledDraft ? (
+                  <s-paragraph style={{ margin: 0 }}>
+                    {lang === "ja"
+                      ? "有効にすると、為替レート方式や価格調整などの価格設定が表示されます。"
+                      : "Turn this on to show FX rate, price adjustment, and rounding settings."}
+                  </s-paragraph>
+                ) : null}
               </div>
             </div>
             <s-button type="submit" {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
