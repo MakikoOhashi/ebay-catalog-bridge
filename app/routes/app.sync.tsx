@@ -800,6 +800,39 @@ export default function SyncConsolePage() {
                   <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
                 </label>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <span>{t.slackNotifyWebhookUrl}</span>
+                  <input
+                    type="url"
+                    name="slackNotifyWebhookUrl"
+                    placeholder="https://hooks.slack.com/services/..."
+                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+                  />
+                  <small>{t.slackNotifyWebhookUrlHelp}</small>
+                  <small>
+                    {t.slackNotifyWebhookUrlHowTo}{" "}
+                    <a
+                      href="https://api.slack.com/messaging/webhooks"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t.slackNotifyWebhookUrlHelpLink}
+                    </a>
+                  </small>
+                </label>
+              </div>
+
+              <div style={{ display: "grid", gap: 16 }}>
+                <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                  <input type="hidden" name="priceSyncEnabled" value="false" />
+                  <input
+                    type="checkbox"
+                    name="priceSyncEnabled"
+                    value="true"
+                    defaultChecked={currentSettings?.priceSyncEnabled ?? false}
+                  />
+                  <span>{t.enablePriceSync}</span>
+                </label>
+                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
                   <span>{t.fxRateMode}</span>
                   <select
                     name="fxRateMode"
@@ -834,17 +867,6 @@ export default function SyncConsolePage() {
                   />
                 </label>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.roundRule}</span>
-                  <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
-                    <option value="nearest">{t.roundNearest}</option>
-                    <option value="up">{t.roundUp}</option>
-                    <option value="down">{t.roundDown}</option>
-                  </select>
-                </label>
-              </div>
-
-              <div style={{ display: "grid", gap: 16 }}>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
                   <span>{t.priceAdjustmentPercent}</span>
                   <input
                     type="number"
@@ -865,34 +887,12 @@ export default function SyncConsolePage() {
                   <small>{t.priceAdjustmentFixedHelp}</small>
                 </label>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.slackNotifyWebhookUrl}</span>
-                  <input
-                    type="url"
-                    name="slackNotifyWebhookUrl"
-                    placeholder="https://hooks.slack.com/services/..."
-                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
-                  />
-                  <small>{t.slackNotifyWebhookUrlHelp}</small>
-                  <small>
-                    {t.slackNotifyWebhookUrlHowTo}{" "}
-                    <a
-                      href="https://api.slack.com/messaging/webhooks"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t.slackNotifyWebhookUrlHelpLink}
-                    </a>
-                  </small>
-                </label>
-                <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                  <input type="hidden" name="priceSyncEnabled" value="false" />
-                  <input
-                    type="checkbox"
-                    name="priceSyncEnabled"
-                    value="true"
-                    defaultChecked={currentSettings?.priceSyncEnabled ?? false}
-                  />
-                  <span>{t.enablePriceSync}</span>
+                  <span>{t.roundRule}</span>
+                  <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
+                    <option value="nearest">{t.roundNearest}</option>
+                    <option value="up">{t.roundUp}</option>
+                    <option value="down">{t.roundDown}</option>
+                  </select>
                 </label>
               </div>
             </div>
