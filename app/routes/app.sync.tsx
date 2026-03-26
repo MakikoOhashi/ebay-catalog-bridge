@@ -751,26 +751,29 @@ export default function SyncConsolePage() {
         <s-paragraph>{t.settingsDesc}</s-paragraph>
         <s-paragraph>{t.settingsOpsNote}</s-paragraph>
         {currentSettings ? (
-          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ marginBottom: 20 }}>
-            <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
-            <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
-              <div>{t.syncFrequency}: {t.nightlyBatch}</div>
-              <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
-              <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
-              <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
-              <div>{t.priceAdjustmentPercent}: {currentSettings.priceAdjustmentPercent}%</div>
-              <div>{t.priceAdjustmentFixed}: {currentSettings.priceAdjustmentFixed}</div>
-              <div>{t.autoFxPair}: {autoFxPairLabel}</div>
-              <div>{t.autoFxLastRate}: {autoFxRateLabel}</div>
-              <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
-              <div>{t.roundRule}: {currentSettings.roundRule}</div>
-              <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
-              <div>{t.slackNotifyWebhookUrl}: {currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"}</div>
-            </div>
-          </s-box>
+          <>
+            <s-box padding="base" borderWidth="base" borderRadius="base">
+              <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
+              <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+                <div>{t.syncFrequency}: {t.nightlyBatch}</div>
+                <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
+                <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
+                <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
+                <div>{t.priceAdjustmentPercent}: {currentSettings.priceAdjustmentPercent}%</div>
+                <div>{t.priceAdjustmentFixed}: {currentSettings.priceAdjustmentFixed}</div>
+                <div>{t.autoFxPair}: {autoFxPairLabel}</div>
+                <div>{t.autoFxLastRate}: {autoFxRateLabel}</div>
+                <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
+                <div>{t.roundRule}: {currentSettings.roundRule}</div>
+                <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
+                <div>{t.slackNotifyWebhookUrl}: {currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"}</div>
+              </div>
+            </s-box>
+            <div style={{ height: 24 }} />
+          </>
         ) : null}
         <settingsSaveFetcher.Form method="post" action="/api/settings">
-          <s-stack direction="block" gap="base" style={{ marginTop: 8 }}>
+          <s-stack direction="block" gap="base" style={{ marginTop: 0 }}>
             <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
               <div style={{ display: "grid", gap: 16 }}>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
