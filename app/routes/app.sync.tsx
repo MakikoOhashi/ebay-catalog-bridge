@@ -1118,7 +1118,7 @@ export default function SyncConsolePage() {
           <span>{t.started}: {formatDate(latestRun?.startedAt)}</span>
           <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
         </s-stack>
-        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
+        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))", marginTop: 12 }}>
           {renderSummaryCard(t.created, latestRun?.createdCount ?? 0)}
           {renderSummaryCard(t.updated, latestRun?.updatedCount ?? 0)}
           {renderSummaryCard(t.skipped, latestRun?.skippedCount ?? 0)}
