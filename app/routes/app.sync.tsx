@@ -92,6 +92,7 @@ const textMap = {
     syncFieldsHelp: "同期したい項目だけチェックしてください。",
     weightSyncNote: "重量運用メモ",
     weightSyncNoteDesc: "重量ベース送料を使う場合は、eBay側の重量を「梱包込みの実発送重量」で統一し、Shopifyのデフォルトパッケージ重量は 0 に設定してください。そうすると、同期した重量をそのまま送料計算に使えます。",
+    imageSyncNote: "画像同期は1商品あたり20枚までにしています。重複追加とメディア増えすぎを防ぐためです。",
     fieldTitle: "商品名",
     fieldDescription: "説明文",
     fieldImages: "画像",
@@ -243,6 +244,7 @@ const textMap = {
     syncFieldsHelp: "Check only the fields you want to sync.",
     weightSyncNote: "Weight Sync Note",
     weightSyncNoteDesc: "If you plan to use weight-based shipping, keep eBay weights as the actual packed shipping weight and set the Shopify default package weight to 0. That lets Shopify calculate shipping directly from the synced product weight.",
+    imageSyncNote: "Image sync is capped at 20 images per product to avoid duplicates and media bloat.",
     fieldTitle: "Title",
     fieldDescription: "Description",
     fieldImages: "Images",
@@ -806,6 +808,7 @@ export default function SyncConsolePage() {
                   </div>
                   <small>{t.syncFieldsHelp}</small>
                   <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
+                  <small style={{ lineHeight: 1.6 }}>{t.imageSyncNote}</small>
                 </label>
                 <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
                   <span>{t.slackNotifyWebhookUrl}</span>

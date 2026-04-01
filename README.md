@@ -35,6 +35,8 @@ Recommended operating model:
 - manual sync: run on demand during the day when you want to refresh selected eBay accounts
 - FX refresh: once per day as part of the nightly sync batch
 
+Image sync is capped at 20 images per product to avoid duplicate additions and media bloat.
+
 ## Catalog Size Guidance
 
 For stable operation, we recommend keeping the total Shopify SKU count at **49,000 or below**.
