@@ -101,6 +101,10 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
   const introBody = variant === "home" ? t.introBodyHome : t.introBodySettings;
   const contactState = contactFetcher.state;
   const contactResult = contactFetcher.data;
+  const introHeadingStyle =
+    variant === "settings"
+      ? { fontSize: 18, fontWeight: 700, lineHeight: 1.35 }
+      : undefined;
 
   if (!clientReady) {
     return (
@@ -118,11 +122,11 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
       </div>
 
       <s-stack direction="block" gap="base" style={{ marginBottom: 20 }}>
-        <s-heading accessibilityRole="heading" accessibilityVisibility="visible" lineClamp={1}>
+        <s-heading accessibilityRole="heading" accessibilityVisibility="visible" lineClamp={1} style={introHeadingStyle}>
           {introTitle}
         </s-heading>
         <s-paragraph>{introBody}</s-paragraph>
-        <div>
+        <div style={{ marginBottom: 8 }}>
           <s-button href="/app/sync" variant="secondary">
             {t.syncConsoleLinkText}
           </s-button>
