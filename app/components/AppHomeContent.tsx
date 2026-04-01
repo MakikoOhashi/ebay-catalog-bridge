@@ -188,10 +188,12 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
               style={{ width: "100%" }}
             />
 
-            <label style={{ display: "grid", gap: 4, width: "100%" }}>
-              <span>{t.contactUpload}</span>
-              <input type="file" name="attachment" />
-            </label>
+            <s-drop-zone
+              label={t.contactUpload}
+              accessibilityLabel={t.contactUpload}
+              name="attachment"
+              style={{ width: "100%" }}
+            />
 
             {contactResult?.message ? (
               <div style={{ color: "#166534", lineHeight: 1.6 }}>{contactResult.message}</div>
