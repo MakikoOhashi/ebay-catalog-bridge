@@ -631,6 +631,12 @@ export default function SyncConsolePage() {
     }
   };
 
+  const renderStepHeading = (label: string) => (
+    <s-heading accessibilityRole="heading" accessibilityVisibility="visible" lineClamp={1} style={{ marginBottom: 12 }}>
+      {label}
+    </s-heading>
+  );
+
   return (
     <s-page heading={t.pageHeading}>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
@@ -638,7 +644,8 @@ export default function SyncConsolePage() {
         <s-button variant={lang === "en" ? "primary" : "secondary"} onClick={() => switchLang("en")}>{t.english}</s-button>
       </div>
 
-      <s-section heading={t.step1}>
+      {renderStepHeading(t.step1)}
+      <s-section accessibilityLabel={t.step1} heading="">
         <s-paragraph>{t.accountConnectionsDesc}</s-paragraph>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
           <s-box padding="base" borderWidth="base" borderRadius="base">
@@ -735,7 +742,8 @@ export default function SyncConsolePage() {
         </div>
       </s-section>
 
-      <s-section heading={t.step2}>
+      {renderStepHeading(t.step2)}
+      <s-section accessibilityLabel={t.step2} heading="">
         <s-paragraph>{t.settingsDesc}</s-paragraph>
         <s-paragraph>{t.settingsOpsNote}</s-paragraph>
         {currentSettings ? (
@@ -922,7 +930,8 @@ export default function SyncConsolePage() {
         </settingsSaveFetcher.Form>
       </s-section>
 
-      <s-section heading={t.step3}>
+      {renderStepHeading(t.step3)}
+      <s-section accessibilityLabel={t.step3} heading="">
         <s-paragraph>{t.runSyncDesc}</s-paragraph>
         <s-box padding="base" borderWidth="base" borderRadius="base">
           <s-stack direction="block" gap="base">
@@ -1082,7 +1091,8 @@ export default function SyncConsolePage() {
         </div>
       </s-section>
 
-      <s-section heading={t.step4}>
+      {renderStepHeading(t.step4)}
+      <s-section accessibilityLabel={t.step4} heading="">
         <s-paragraph>{t.latestSummaryDesc}</s-paragraph>
         <s-stack direction="inline" gap="base">
           <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
