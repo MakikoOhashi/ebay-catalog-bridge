@@ -95,6 +95,7 @@ const textMap = {
     settings: "設定",
     settingsDesc: "ここでは自動同期バッチの頻度や価格設定を保存します。保存した内容は下の『現在の保存設定』に出ます。",
     settingsOpsNote: "このアプリは少しずつ巡回するバッチ同期を前提にしています。安定運用の目安として、Shopifyストアの総SKU数は 49,000 件以下を推奨します。",
+    saveSettingsHelp: "変更したらここで保存してください。保存した内容は次回の同期から反映されます。",
     syncFrequency: "自動同期バッチ",
     nightlyBatch: "毎日1回（夜間）",
     syncFields: "同期フィールド",
@@ -255,6 +256,7 @@ const textMap = {
     settings: "Settings",
     settingsDesc: "Save the automatic sync batch frequency and pricing options here. The saved result appears in 'Currently saved settings' below.",
     settingsOpsNote: "This app is designed for gradual batch-based syncs. For stable operation, we recommend keeping the total Shopify SKU count at 49,000 or below.",
+    saveSettingsHelp: "Save changes here. The saved values will apply from the next sync onward.",
     syncFrequency: "Automatic Sync Batch",
     nightlyBatch: "Once per day (night)",
     syncFields: "Sync Fields",
@@ -995,22 +997,30 @@ export default function SyncConsolePage() {
             </div>
           </>
         ) : null}
-        <settingsSaveFetcher.Form method="post" action="/api/settings">
-          <s-stack direction="block" gap="base" style={{ marginTop: 20 }}>
-            <s-button
-              type="submit"
-              {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
-              style={{
-                background: "#111827",
-                borderColor: "#111827",
-                color: "#fff",
-                minWidth: 160,
-              }}
-            >
-              {t.saveSettings}
-            </s-button>
-          </s-stack>
-        </settingsSaveFetcher.Form>
+        <div style={{ marginTop: 20 }}>
+          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#f8fafc" }}>
+            <settingsSaveFetcher.Form method="post" action="/api/settings">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                <div style={{ display: "grid", gap: 4 }}>
+                  <strong>{t.saveSettings}</strong>
+                  <small style={{ color: "#64748b", lineHeight: 1.5 }}>{t.saveSettingsHelp}</small>
+                </div>
+                <s-button
+                  type="submit"
+                  {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
+                  style={{
+                    background: "#111827",
+                    borderColor: "#111827",
+                    color: "#fff",
+                    minWidth: 160,
+                  }}
+                >
+                  {t.saveSettings}
+                </s-button>
+              </div>
+            </settingsSaveFetcher.Form>
+          </s-box>
+        </div>
       </s-section>
 
       {renderStepHeading(t.step3)}
