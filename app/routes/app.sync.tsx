@@ -811,7 +811,7 @@ export default function SyncConsolePage() {
         <s-paragraph>{t.settingsDesc}</s-paragraph>
         <s-paragraph>{t.settingsOpsNote}</s-paragraph>
         {currentSettings ? (
-          <>
+          <settingsSaveFetcher.Form method="post" action="/api/settings" id="settings-save-form">
             <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
               {renderSettingsTabCard(
                 "sync",
@@ -989,37 +989,42 @@ export default function SyncConsolePage() {
                       {t.slackNotifyWebhookUrlHelpLink}
                     </a>
                   </small>
-                  <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
-                    <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>
+                  <s-button
+                    type="button"
+                    onClick={() => {
+                      notifyTestFetcher.submit(new FormData(), {
+                        method: "post",
+                        action: "/api/sync/notify-test",
+                      });
+                    }}
+                    {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}
+                  >
                       {t.sendTestAlert}
-                    </s-button>
-                  </notifyTestFetcher.Form>
+                  </s-button>
                   <small style={{ color: "#64748b", lineHeight: 1.5, marginTop: 4 }}>Slackの通知テストを送信します。</small>
                 </div>
               </s-box>
             </div>
-          </>
-        ) : null}
-        <div style={{ marginTop: 20 }}>
-          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#dbeafe", borderColor: "#93c5fd" }}>
-            <settingsSaveFetcher.Form method="post" action="/api/settings">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                <div style={{ display: "grid", gap: 4 }}>
-                  <strong>{t.saveSettings}</strong>
-                  <small style={{ color: "#64748b", lineHeight: 1.5 }}>{t.saveSettingsHelp}</small>
+            <div style={{ marginTop: 20 }}>
+              <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#dbeafe", borderColor: "#93c5fd" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                  <div style={{ display: "grid", gap: 4 }}>
+                    <strong>{t.saveSettings}</strong>
+                    <small style={{ color: "#64748b", lineHeight: 1.5 }}>{t.saveSettingsHelp}</small>
+                  </div>
+                  <s-button
+                    type="submit"
+                    variant="primary"
+                    {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
+                    style={{ minWidth: 160 }}
+                  >
+                    {t.saveSettings}
+                  </s-button>
                 </div>
-                <s-button
-                  type="submit"
-                  variant="primary"
-                  {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
-                  style={{ minWidth: 160 }}
-                >
-                  {t.saveSettings}
-                </s-button>
-              </div>
-            </settingsSaveFetcher.Form>
-          </s-box>
-        </div>
+              </s-box>
+            </div>
+          </settingsSaveFetcher.Form>
+        ) : null}
       </s-section>
 
       {renderStepHeading(t.step3)}
