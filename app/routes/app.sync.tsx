@@ -654,7 +654,7 @@ export default function SyncConsolePage() {
       accessibilityRole="heading"
       accessibilityVisibility="visible"
       lineClamp={1}
-      style={{ marginTop: 8, marginBottom: 10, fontSize: 22, fontWeight: 700, lineHeight: 1.25 }}
+      style={{ marginTop: 8, marginBottom: 8, fontSize: 16, fontWeight: 700, lineHeight: 1.35 }}
     >
       {label}
     </s-heading>
