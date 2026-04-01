@@ -815,20 +815,15 @@ export default function SyncConsolePage() {
                   name="slackNotifyWebhookUrl"
                   placeholder="https://hooks.slack.com/services/..."
                   defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
-                  details={
-                    <span>
-                      {t.slackNotifyWebhookUrlHelp}{" "}
-                      <a
-                        href="https://api.slack.com/messaging/webhooks"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t.slackNotifyWebhookUrlHelpLink}
-                      </a>
-                    </span>
-                  }
+                  details={t.slackNotifyWebhookUrlHelp}
                   style={{ width: "100%" }}
                 />
+                <small>
+                  {t.slackNotifyWebhookUrlHowTo}{" "}
+                  <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noreferrer">
+                    {t.slackNotifyWebhookUrlHelpLink}
+                  </a>
+                </small>
               </div>
 
               <div style={{ display: "grid", gap: 16 }}>
