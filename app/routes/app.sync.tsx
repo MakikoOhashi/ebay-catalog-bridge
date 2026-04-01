@@ -1014,43 +1014,37 @@ export default function SyncConsolePage() {
                     }}
                   >
                     <strong>{t.testItem} {index + 1}</strong>
-                    <label style={{ display: "grid", gap: 4 }}>
-                      <span>{t.sku}</span>
-                      <input
-                        type="text"
-                        value={item.sku}
-                        onChange={(event) => {
-                          const next = [...testItems];
-                          next[index] = { ...next[index], sku: event.target.value };
-                          setTestItems(next);
-                        }}
-                      />
-                    </label>
-                    <label style={{ display: "grid", gap: 4 }}>
-                      <span>{t.itemId}</span>
-                      <input
-                        type="text"
-                        value={item.itemId}
-                        onChange={(event) => {
-                          const next = [...testItems];
-                          next[index] = { ...next[index], itemId: event.target.value };
-                          setTestItems(next);
-                        }}
-                      />
-                    </label>
-                    <label style={{ display: "grid", gap: 4 }}>
-                      <span>{t.lastModified}</span>
-                      <input
-                        type="text"
-                        placeholder="2026-03-05T00:00:00Z"
-                        value={item.lastModified}
-                        onChange={(event) => {
-                          const next = [...testItems];
-                          next[index] = { ...next[index], lastModified: event.target.value };
-                          setTestItems(next);
-                        }}
-                      />
-                    </label>
+                    <s-text-field
+                      label={t.sku}
+                      value={item.sku}
+                      style={{ width: "100%" }}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], sku: (event.target as HTMLInputElement).value };
+                        setTestItems(next);
+                      }}
+                    />
+                    <s-text-field
+                      label={t.itemId}
+                      value={item.itemId}
+                      style={{ width: "100%" }}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], itemId: (event.target as HTMLInputElement).value };
+                        setTestItems(next);
+                      }}
+                    />
+                    <s-text-field
+                      label={t.lastModified}
+                      placeholder="2026-03-05T00:00:00Z"
+                      value={item.lastModified}
+                      style={{ width: "100%" }}
+                      onChange={(event) => {
+                        const next = [...testItems];
+                        next[index] = { ...next[index], lastModified: (event.target as HTMLInputElement).value };
+                        setTestItems(next);
+                      }}
+                    />
                     {testItems.length > 1 ? (
                       <s-button
                         variant="secondary"
