@@ -91,8 +91,9 @@ const textMap = {
     syncFields: "同期フィールド",
     syncFieldsHelp: "同期したい項目だけチェックしてください。",
     weightSyncNote: "重量運用メモ",
-    weightSyncNoteDesc: "重量ベース送料を使う場合は、eBay側の重量を「梱包込みの実発送重量」で統一し、Shopifyのデフォルトパッケージ重量は 0 に設定してください。そうすると、同期した重量をそのまま送料計算に使えます。",
-    imageSyncNote: "画像同期は1商品あたり20枚までにしています。重複追加とメディア増えすぎを防ぐためです。",
+    weightSyncNoteDesc: "重量ベース送料を使う場合は、eBay側の重量を梱包込みの実発送重量にそろえ、Shopifyのデフォルトパッケージ重量は 0 にしてください。そうすると、同期した重量をそのまま送料計算に使えます。",
+    imageSyncNote: "画像同期メモ",
+    imageSyncNoteDesc: "画像同期は1商品あたり20枚までにしています。重複追加とメディア増えすぎを防ぐためです。",
     fieldTitle: "商品名",
     fieldDescription: "説明文",
     fieldImages: "画像",
@@ -807,7 +808,8 @@ export default function SyncConsolePage() {
                       lineHeight: 1.6,
                     }}
                   >
-                    {t.imageSyncNote}
+                    <strong>{t.imageSyncNote}</strong>
+                    <div>{t.imageSyncNoteDesc}</div>
                   </div>
                 </div>
                 <s-url-field
