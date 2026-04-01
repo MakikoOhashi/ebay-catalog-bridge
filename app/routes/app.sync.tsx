@@ -128,8 +128,8 @@ const textMap = {
     roundDown: "切り捨て",
     slackNotifyWebhookUrl: "Slack通知Webhook URL",
     slackNotifyWebhookUrlHelp: "このストア専用のSlack Incoming Webhook URLを設定すると、同期エラー時の通知とテスト通知がこのストアのSlackに届きます。",
-    slackNotifyWebhookUrlHowTo: "Slack管理画面で Incoming Webhooks を追加すると取得できます。",
-    slackNotifyWebhookUrlHelpLink: "Slackヘルプ",
+    slackNotifyWebhookUrlHowTo: "Webhookの取り方は手順ページで確認できます。",
+    slackNotifyWebhookUrlHelpLink: "Slack Webhook設定方法",
     enablePriceSync: "価格同期を有効化",
     saveSettings: "設定保存",
     resolveConflict: "運用者向け: 競合解消",
@@ -288,8 +288,8 @@ const textMap = {
     roundDown: "Round Down",
     slackNotifyWebhookUrl: "Slack Notify Webhook URL",
     slackNotifyWebhookUrlHelp: "Set a store-specific Slack Incoming Webhook URL to send sync issue alerts and test notifications to this store's Slack.",
-    slackNotifyWebhookUrlHowTo: "You can get it by adding Incoming Webhooks in Slack.",
-    slackNotifyWebhookUrlHelpLink: "Slack help",
+    slackNotifyWebhookUrlHowTo: "See the setup guide for how to get the webhook URL.",
+    slackNotifyWebhookUrlHelpLink: "Slack Webhook setup guide",
     enablePriceSync: "Enable Price Sync",
     saveSettings: "Save Settings",
     resolveConflict: "Operator Only: Resolve Conflict",
@@ -996,7 +996,7 @@ export default function SyncConsolePage() {
                   />
                   <small>
                     {t.slackNotifyWebhookUrlHowTo}{" "}
-                    <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noreferrer">
+                    <a href="https://quiet-thrill-c13.notion.site/Slack-Webhook-335c3eba44cb80a9b0d8c7295941dbd9?pvs=74" target="_blank" rel="noreferrer">
                       {t.slackNotifyWebhookUrlHelpLink}
                     </a>
                   </small>
