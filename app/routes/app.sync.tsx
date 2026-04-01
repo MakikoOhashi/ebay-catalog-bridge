@@ -576,33 +576,6 @@ export default function SyncConsolePage() {
     () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
     [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
   );
-  const missingLabel = (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-      <span>{t.missing}</span>
-      <s-tooltip id="missing-tooltip">
-        {t.missingHelp}
-      </s-tooltip>
-      <span
-        aria-describedby="missing-tooltip"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 16,
-          height: 16,
-          borderRadius: 999,
-          border: "1px solid #cbd5e1",
-          color: "#475569",
-          fontSize: 11,
-          lineHeight: 1,
-          cursor: "help",
-        }}
-      >
-        ?
-      </span>
-    </span>
-  );
-
   if (!clientReady) {
     return (
       <div suppressHydrationWarning style={{ padding: 16 }}>
@@ -668,6 +641,16 @@ export default function SyncConsolePage() {
     >
       {label}
     </s-heading>
+  );
+
+  const renderSummaryCard = (label: string, value: number | string, help?: string) => (
+    <s-box borderWidth="base" borderRadius="base" padding="base">
+      <div style={{ display: "grid", gap: 4 }}>
+        <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600 }}>{label}</div>
+        <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{value}</div>
+        {help ? <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>{help}</div> : null}
+      </div>
+    </s-box>
   );
 
   return (
@@ -1135,12 +1118,12 @@ export default function SyncConsolePage() {
           <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
         </s-stack>
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", marginTop: 12 }}>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.created}: {latestRun?.createdCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.updated}: {latestRun?.updatedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.skipped}: {latestRun?.skippedCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.conflicts}: {latestRun?.conflictCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{missingLabel}: {latestRun?.missingCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.errors}: {latestRun?.errorCount ?? 0}</s-box>
+          {renderSummaryCard(t.created, latestRun?.createdCount ?? 0)}
+          {renderSummaryCard(t.updated, latestRun?.updatedCount ?? 0)}
+          {renderSummaryCard(t.skipped, latestRun?.skippedCount ?? 0)}
+          {renderSummaryCard(t.conflicts, latestRun?.conflictCount ?? 0)}
+          {renderSummaryCard(t.missing, latestRun?.missingCount ?? 0, t.missingHelp)}
+          {renderSummaryCard(t.errors, latestRun?.errorCount ?? 0)}
         </div>
         <div style={{ marginTop: 16 }}>
           <s-paragraph>{t.runHistoryDesc}</s-paragraph>
@@ -1160,7 +1143,7 @@ export default function SyncConsolePage() {
                       <th align="left">{t.created}</th>
                       <th align="left">{t.updated}</th>
                       <th align="left">{t.errors}</th>
-                      <th align="left">{missingLabel}</th>
+                      <th align="left">{t.missing}</th>
                     </tr>
                   </thead>
                   <tbody>
