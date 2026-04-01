@@ -6,8 +6,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
   const url = new URL(request.url);
-  const limitRaw = Number(url.searchParams.get("limit") || 20);
-  const limit = Math.max(1, Math.min(100, Number.isFinite(limitRaw) ? limitRaw : 20));
+  const defaultLimit = 10;
+  const limitRaw = Number(url.searchParams.get("limit") || defaultLimit);
+  const limit = Math.max(
+    1,
+    Math.min(100, Number.isFinite(limitRaw) ? limitRaw : defaultLimit),
+  );
 
   const store = await db.store.findUnique({
     where: { shop },
