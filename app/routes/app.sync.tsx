@@ -409,6 +409,7 @@ type SyncRunsPayload = {
 
 type SettingsResponsePayload = {
   shop: string;
+  updated?: boolean;
   settings: {
     syncFrequencyMinutes: number;
     syncFields: string[];
@@ -469,6 +470,7 @@ export default function SyncConsolePage() {
   const [manualSyncResult, setManualSyncResult] = useState<unknown>(null);
   const [manualSyncError, setManualSyncError] = useState<string | null>(null);
   const [manualSyncRunning, setManualSyncRunning] = useState(false);
+  const [settingsSaveNotice, setSettingsSaveNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setClientReady(true);
@@ -538,6 +540,14 @@ export default function SyncConsolePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsSaveFetcher.data, settingsSaveFetcher.state]);
 
+  useEffect(() => {
+    if (settingsSaveFetcher.state !== "idle" || !settingsSaveFetcher.data?.updated) return;
+
+    setSettingsSaveNotice(lang === "ja" ? "保存しました" : "Saved");
+    const timer = window.setTimeout(() => setSettingsSaveNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [lang, settingsSaveFetcher.data, settingsSaveFetcher.state]);
+
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
   const runsJson = useMemo(() => pretty(runsFetcher.data, t.noRunHistoryLoaded), [runsFetcher.data, t.noRunHistoryLoaded]);
@@ -547,17 +557,18 @@ export default function SyncConsolePage() {
   const checkpoints = statusFetcher.data?.checkpoints || [];
   const connectedCheckpoints = checkpoints.filter((checkpoint) => checkpoint.status === "connected");
   const currentSettings = settingsFetcher.data?.settings || null;
+  const displaySettings = settingsSaveFetcher.data?.settings ?? currentSettings;
   const accountSlots = ["primary", "account-2", "account-3", "account-4"];
 
   useEffect(() => {
-    if (currentSettings?.fxRateMode === "auto" || currentSettings?.fxRateMode === "fixed") {
-      setSelectedFxRateMode(currentSettings.fxRateMode);
+    if (displaySettings?.fxRateMode === "auto" || displaySettings?.fxRateMode === "fixed") {
+      setSelectedFxRateMode(displaySettings.fxRateMode);
     }
-  }, [currentSettings?.fxRateMode]);
+  }, [displaySettings?.fxRateMode]);
 
   useEffect(() => {
-    setPriceSyncEnabledDraft(currentSettings?.priceSyncEnabled ?? false);
-  }, [currentSettings?.priceSyncEnabled]);
+    setPriceSyncEnabledDraft(displaySettings?.priceSyncEnabled ?? false);
+  }, [displaySettings?.priceSyncEnabled]);
 
   useEffect(() => {
     const connectedIds = connectedCheckpoints.map((checkpoint) => String(checkpoint.ebayAccountId));
@@ -583,11 +594,11 @@ export default function SyncConsolePage() {
     const advanced = advancedItemsJson.trim();
     return advanced || serializeTestItems(testItems);
   }, [advancedItemsJson, testItems]);
-  const autoFxTargetCurrency = currentSettings?.autoFxLastTargetCurrency || null;
+  const autoFxTargetCurrency = displaySettings?.autoFxLastTargetCurrency || null;
   const autoFxPairLabel = autoFxTargetCurrency ? `USD -> ${autoFxTargetCurrency}` : "-";
   const autoFxRateLabel =
-    currentSettings?.autoFxLastRate != null && autoFxTargetCurrency
-      ? `1 USD = ${currentSettings.autoFxLastRate} ${autoFxTargetCurrency}`
+    displaySettings?.autoFxLastRate != null && autoFxTargetCurrency
+      ? `1 USD = ${displaySettings.autoFxLastRate} ${autoFxTargetCurrency}`
       : "-";
   const enqueueJson = useMemo(
     () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
@@ -810,25 +821,25 @@ export default function SyncConsolePage() {
       <s-section accessibilityLabel={t.step2} heading="">
         <s-paragraph>{t.settingsDesc}</s-paragraph>
         <s-paragraph>{t.settingsOpsNote}</s-paragraph>
-        {currentSettings ? (
+        {displaySettings ? (
           <settingsSaveFetcher.Form method="post" action="/api/settings" id="settings-save-form">
             <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
               {renderSettingsTabCard(
                 "sync",
                 lang === "ja" ? "同期設定" : "Sync settings",
                 t.nightlyBatch,
-                `${t.syncFields}: ${currentSettings.syncFields.join(", ")}`,
+                `${t.syncFields}: ${displaySettings.syncFields.join(", ")}`,
               )}
               {renderSettingsTabCard(
                 "price",
                 lang === "ja" ? "価格設定" : "Price settings",
-                currentSettings.priceSyncEnabled ? "ON" : "OFF",
-                `${t.fxRateMode}: ${currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}`,
+                displaySettings.priceSyncEnabled ? "ON" : "OFF",
+                `${t.fxRateMode}: ${displaySettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}`,
               )}
               {renderSettingsTabCard(
                 "notify",
                 lang === "ja" ? "通知設定" : "Notification settings",
-                currentSettings.slackNotifyWebhookUrl ? "Configured" : "-",
+                displaySettings.slackNotifyWebhookUrl ? "Configured" : "-",
                 t.slackNotifyWebhookUrl,
               )}
             </div>
@@ -853,7 +864,7 @@ export default function SyncConsolePage() {
                           label={t[option.labelKey]}
                           name="syncFields"
                           value={option.value}
-                          defaultChecked={currentSettings?.syncFields?.includes(option.value) ?? true}
+                          defaultChecked={displaySettings?.syncFields?.includes(option.value) ?? true}
                         />
                       ))}
                     </div>
@@ -920,14 +931,14 @@ export default function SyncConsolePage() {
                           <input
                             type="hidden"
                             name="fixedFxRate"
-                            value={currentSettings?.fixedFxRate ?? 150}
+                            value={displaySettings?.fixedFxRate ?? 150}
                           />
                         ) : null}
                         <s-number-field
                           label={t.fixedFxRate}
                           name="fixedFxRate"
                           step="0.01"
-                          defaultValue={currentSettings?.fixedFxRate ?? 150}
+                          defaultValue={displaySettings?.fixedFxRate ?? 150}
                           disabled={selectedFxRateMode === "auto"}
                           style={{ width: "100%" }}
                         />
@@ -937,7 +948,7 @@ export default function SyncConsolePage() {
                           label={t.priceAdjustmentPercent}
                           name="priceAdjustmentPercent"
                           step="0.01"
-                          defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+                          defaultValue={displaySettings?.priceAdjustmentPercent ?? 0}
                           style={{ width: "100%" }}
                         />
                         <small>{t.priceAdjustmentPercentHelp}</small>
@@ -947,7 +958,7 @@ export default function SyncConsolePage() {
                           label={t.priceAdjustmentFixed}
                           name="priceAdjustmentFixed"
                           step="0.01"
-                          defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+                          defaultValue={displaySettings?.priceAdjustmentFixed ?? 0}
                           style={{ width: "100%" }}
                         />
                         <small>{t.priceAdjustmentFixedHelp}</small>
@@ -956,7 +967,7 @@ export default function SyncConsolePage() {
                         <s-select
                           label={t.roundRule}
                           name="roundRule"
-                          value={currentSettings?.roundRule ?? "nearest"}
+                          value={displaySettings?.roundRule ?? "nearest"}
                           style={{ width: "100%" }}
                         >
                           <s-option value="nearest">{t.roundNearest}</s-option>
@@ -979,7 +990,7 @@ export default function SyncConsolePage() {
                     label={t.slackNotifyWebhookUrl}
                     name="slackNotifyWebhookUrl"
                     placeholder="https://hooks.slack.com/services/..."
-                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+                    defaultValue={displaySettings?.slackNotifyWebhookUrl ?? ""}
                     details={t.slackNotifyWebhookUrlHelp}
                     style={{ width: "100%" }}
                   />
@@ -1007,19 +1018,26 @@ export default function SyncConsolePage() {
             </div>
             <div style={{ marginTop: 20 }}>
               <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#dbeafe", borderColor: "#93c5fd" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-                  <div style={{ display: "grid", gap: 4 }}>
-                    <strong>{t.saveSettings}</strong>
-                    <small style={{ color: "#64748b", lineHeight: 1.5 }}>{t.saveSettingsHelp}</small>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <div style={{ display: "grid", gap: 4 }}>
+                      <strong>{t.saveSettings}</strong>
+                      <small style={{ color: "#64748b", lineHeight: 1.5 }}>{t.saveSettingsHelp}</small>
+                    </div>
+                    <s-button
+                      type="submit"
+                      variant="primary"
+                      {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
+                      style={{ minWidth: 160 }}
+                    >
+                      {t.saveSettings}
+                    </s-button>
                   </div>
-                  <s-button
-                    type="submit"
-                    variant="primary"
-                    {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
-                    style={{ minWidth: 160 }}
-                  >
-                    {t.saveSettings}
-                  </s-button>
+                  {settingsSaveNotice ? (
+                    <small role="status" aria-live="polite" style={{ color: "#166534", fontWeight: 700, lineHeight: 1.5 }}>
+                      {settingsSaveNotice}
+                    </small>
+                  ) : null}
                 </div>
               </s-box>
             </div>
