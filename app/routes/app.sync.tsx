@@ -73,7 +73,7 @@ const textMap = {
     manualSyncNoSelection: "手動同期するアカウントを1つ以上選んでください。",
     reflectTestAccount: "テスト入力を流すアカウント",
     reflectTestRun: "テスト反映を実行",
-    reflectTest: "入力テスト（任意）",
+    reflectTest: "入力テスト",
     reflectTestDesc: "この画面で入力したテスト商品を使って、SKUや価格がShopifyにどう反映されるか確認できます。eBayの実データを取りに行く機能ではありません。",
     reflectTestEmpty: "通常のeBay同期では使いません。空欄のままでOKです。",
     testItem: "テスト商品",
@@ -232,7 +232,7 @@ const textMap = {
     manualSyncNoSelection: "Select at least one account for manual sync.",
     reflectTestAccount: "Account For Test Input",
     reflectTestRun: "Run Test Reflection",
-    reflectTest: "Input Test (optional)",
+    reflectTest: "Input Test",
     reflectTestDesc: "Use the test products entered in this section to preview how SKU and pricing would reflect in Shopify. This does not fetch real eBay data.",
     reflectTestEmpty: "For normal eBay sync, leave this empty.",
     testItem: "Test Item",
@@ -1019,11 +1019,12 @@ export default function SyncConsolePage() {
 
         <div style={{ marginTop: 16 }}>
           <s-box padding="base" borderWidth="base" borderRadius="base">
-            <s-stack direction="block" gap="base">
-              <strong>{t.reflectTest}</strong>
-              <s-paragraph>{t.reflectTestDesc}</s-paragraph>
-              <small>{t.reflectTestEmpty}</small>
-              <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
+            <details>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>{t.reflectTest}</summary>
+              <s-stack direction="block" gap="base" style={{ marginTop: 12 }}>
+                <s-paragraph>{t.reflectTestDesc}</s-paragraph>
+                <small>{t.reflectTestEmpty}</small>
+                <enqueueFetcher.Form method="post" action="/jobs/enqueue-sync">
                 <input type="hidden" name="shop" value={shop} />
                 <input type="hidden" name="mode" value="rolling" />
                 <input type="hidden" name="fullScanComplete" value="false" />
@@ -1113,7 +1114,8 @@ export default function SyncConsolePage() {
                   <s-button type="submit" {...(enqueueFetcher.state !== "idle" ? { loading: true } : {})}>{t.reflectTestRun}</s-button>
                 </div>
               </enqueueFetcher.Form>
-            </s-stack>
+              </s-stack>
+            </details>
           </s-box>
         </div>
       </s-section>
