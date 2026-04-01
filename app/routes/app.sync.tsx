@@ -778,12 +778,14 @@ export default function SyncConsolePage() {
                   </s-badge>
                   </div>
                   <div style={{ display: "grid", gap: 8 }}>
-                    <s-button
-                      href={`/api/ebay/oauth/start?label=${encodeURIComponent(slotLabel)}&shop=${encodeURIComponent(shop)}${checkpoint?.ebayAccountId ? `&accountId=${checkpoint.ebayAccountId}` : ""}`}
-                      target="_blank"
-                    >
-                      {t.connect}
-                    </s-button>
+                    {!isConnected ? (
+                      <s-button
+                        href={`/api/ebay/oauth/start?label=${encodeURIComponent(slotLabel)}&shop=${encodeURIComponent(shop)}${checkpoint?.ebayAccountId ? `&accountId=${checkpoint.ebayAccountId}` : ""}`}
+                        target="_blank"
+                      >
+                        {t.connect}
+                      </s-button>
+                    ) : null}
                     {isConnected && checkpoint?.ebayAccountId ? (
                       <disconnectFetcher.Form method="post" action="/api/ebay/account/disconnect">
                         <input type="hidden" name="accountId" value={checkpoint.ebayAccountId} />
