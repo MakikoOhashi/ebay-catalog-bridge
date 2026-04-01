@@ -664,6 +664,46 @@ export default function SyncConsolePage() {
     </s-box>
   );
 
+  const renderSettingRow = (label: string, value: string) => (
+    <div style={{ display: "grid", gap: 2 }}>
+      <div style={{ color: "#64748b", fontSize: 12, fontWeight: 600 }}>{label}</div>
+      <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{value}</div>
+    </div>
+  );
+
+  const renderSettingsCard = (
+    title: string,
+    headline: string,
+    summary: string,
+    details: Array<[string, string]>,
+  ) => (
+    <details
+      style={{
+        border: "1px solid var(--s-color-border-default)",
+        borderRadius: 12,
+        padding: 16,
+        background: "white",
+      }}
+    >
+      <summary
+        style={{
+          cursor: "pointer",
+          listStyle: "none",
+          display: "grid",
+          gap: 4,
+          outline: "none",
+        }}
+      >
+        <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600 }}>{title}</div>
+        <div style={{ color: "#0f172a", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{headline}</div>
+        <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>{summary}</div>
+      </summary>
+      <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+        {details.map(([label, value]) => renderSettingRow(label, value))}
+      </div>
+    </details>
+  );
+
   return (
     <s-page heading={t.pageHeading}>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
@@ -775,23 +815,39 @@ export default function SyncConsolePage() {
         <s-paragraph>{t.settingsOpsNote}</s-paragraph>
         {currentSettings ? (
           <>
-            <s-box padding="base" borderWidth="base" borderRadius="base">
-              <strong>{lang === "ja" ? "現在の保存設定" : "Currently saved settings"}</strong>
-              <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
-                <div>{t.syncFrequency}: {t.nightlyBatch}</div>
-                <div>{t.syncFields}: {currentSettings.syncFields.join(", ")}</div>
-                <div>{t.fxRateMode}: {currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}</div>
-                <div>{t.fixedFxRate}: {currentSettings.fixedFxRate}</div>
-                <div>{t.priceAdjustmentPercent}: {currentSettings.priceAdjustmentPercent}%</div>
-                <div>{t.priceAdjustmentFixed}: {currentSettings.priceAdjustmentFixed}</div>
-                <div>{t.autoFxPair}: {autoFxPairLabel}</div>
-                <div>{t.autoFxLastRate}: {autoFxRateLabel}</div>
-                <div>{t.autoFxLastFetchedAt}: {formatDate(currentSettings.autoFxLastFetchedAt)}</div>
-                <div>{t.roundRule}: {currentSettings.roundRule}</div>
-                <div>{t.enablePriceSync}: {currentSettings.priceSyncEnabled ? "ON" : "OFF"}</div>
-                <div>{t.slackNotifyWebhookUrl}: {currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"}</div>
-              </div>
-            </s-box>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+              {renderSettingsCard(
+                lang === "ja" ? "同期設定" : "Sync settings",
+                t.nightlyBatch,
+                `${t.syncFields}: ${currentSettings.syncFields.join(", ")}`,
+                [
+                  [t.syncFrequency, t.nightlyBatch],
+                  [t.syncFields, currentSettings.syncFields.join(", ")],
+                ],
+              )}
+              {renderSettingsCard(
+                lang === "ja" ? "価格設定" : "Price settings",
+                currentSettings.priceSyncEnabled ? "ON" : "OFF",
+                `${t.fxRateMode}: ${currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}`,
+                [
+                  [t.enablePriceSync, currentSettings.priceSyncEnabled ? "ON" : "OFF"],
+                  [t.fxRateMode, currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed],
+                  [t.fixedFxRate, String(currentSettings.fixedFxRate)],
+                  [t.priceAdjustmentPercent, `${currentSettings.priceAdjustmentPercent}%`],
+                  [t.priceAdjustmentFixed, String(currentSettings.priceAdjustmentFixed)],
+                  [t.autoFxPair, autoFxPairLabel],
+                  [t.autoFxLastRate, autoFxRateLabel],
+                  [t.autoFxLastFetchedAt, formatDate(currentSettings.autoFxLastFetchedAt)],
+                  [t.roundRule, currentSettings.roundRule],
+                ],
+              )}
+              {renderSettingsCard(
+                lang === "ja" ? "通知設定" : "Notification settings",
+                currentSettings.slackNotifyWebhookUrl ? "Configured" : "-",
+                t.slackNotifyWebhookUrl,
+                [[t.slackNotifyWebhookUrl, currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"]],
+              )}
+            </div>
             <div style={{ height: 24 }} />
           </>
         ) : null}
