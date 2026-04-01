@@ -993,7 +993,7 @@ export default function SyncConsolePage() {
           </>
         ) : null}
         <div style={{ marginTop: 20 }}>
-          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
+          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#dbeafe", borderColor: "#93c5fd" }}>
             <settingsSaveFetcher.Form method="post" action="/api/settings">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                 <div style={{ display: "grid", gap: 4 }}>
@@ -1179,7 +1179,6 @@ export default function SyncConsolePage() {
 
       {renderStepHeading(t.step4)}
       <s-section accessibilityLabel={t.step4} heading="">
-        <s-paragraph>{t.latestSummaryDesc}</s-paragraph>
         <s-stack direction="inline" gap="base">
           <s-badge tone={statusTone(latestRun?.status)}>{latestRun?.status || t.unknown}</s-badge>
           <span>{t.runId}: {latestRun?.id ?? "-"}</span>
@@ -1226,7 +1225,6 @@ export default function SyncConsolePage() {
               </span>
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ color: "#0f172a", fontSize: 16, fontWeight: 700 }}>{t.runHistoryTitle}</div>
-                <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>{t.runHistoryDesc}</div>
               </div>
             </summary>
             <style>{`
@@ -1238,6 +1236,7 @@ export default function SyncConsolePage() {
               }
             `}</style>
             <div style={{ marginTop: 12 }}>
+              <s-paragraph>{t.runHistoryDesc}</s-paragraph>
               <s-box padding="base" borderWidth="base" borderRadius="base">
                 {runs.length === 0 ? (
                   <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
