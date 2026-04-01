@@ -122,7 +122,11 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
           {introTitle}
         </s-heading>
         <s-paragraph>{introBody}</s-paragraph>
-        <s-link href="/app/sync">{t.syncConsoleLinkText}</s-link>
+        <div>
+          <s-button href="/app/sync" variant="secondary">
+            {t.syncConsoleLinkText}
+          </s-button>
+        </div>
       </s-stack>
 
       <s-section heading={t.rulesHeading}>
