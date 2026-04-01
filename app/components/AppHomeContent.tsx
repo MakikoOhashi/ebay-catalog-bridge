@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
+import { SettingsDebugSection } from "./SettingsDebugSection";
 
 type Lang = "ja" | "en";
 type Variant = "home" | "settings";
@@ -202,6 +203,8 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
           </s-box>
         </contactFetcher.Form>
       </s-section>
+
+      {variant === "settings" ? <SettingsDebugSection lang={lang} /> : null}
     </s-page>
   );
 }

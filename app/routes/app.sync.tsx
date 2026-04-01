@@ -474,14 +474,10 @@ export default function SyncConsolePage() {
   const enqueueFetcher = useFetcher();
   const settingsFetcher = useFetcher<SettingsResponsePayload>();
   const settingsSaveFetcher = useFetcher<SettingsResponsePayload>();
-  const conflictsFetcher = useFetcher();
-  const errorsFetcher = useFetcher();
-  const resolveConflictFetcher = useFetcher();
   const retryFetcher = useFetcher();
   const notifyTestFetcher = useFetcher();
   const runsFetcher = useFetcher<SyncRunsPayload>();
   const disconnectFetcher = useFetcher();
-  const itemDebugFetcher = useFetcher();
 
   useEffect(() => {
     if (!clientReady) return;
@@ -495,7 +491,6 @@ export default function SyncConsolePage() {
     if (disconnectFetcher.data && disconnectFetcher.state === "idle") {
       statusFetcher.load("/api/sync/status");
       runsFetcher.load("/api/sync/runs?limit=20");
-      conflictsFetcher.load("/api/conflicts");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disconnectFetcher.data, disconnectFetcher.state]);
@@ -517,14 +512,6 @@ export default function SyncConsolePage() {
   }, [retryFetcher.data, retryFetcher.state]);
 
   useEffect(() => {
-    if (resolveConflictFetcher.data && resolveConflictFetcher.state === "idle") {
-      conflictsFetcher.load("/api/conflicts");
-      statusFetcher.load("/api/sync/status");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolveConflictFetcher.data, resolveConflictFetcher.state]);
-
-  useEffect(() => {
     if (settingsSaveFetcher.data && settingsSaveFetcher.state === "idle") {
       settingsFetcher.load("/api/settings");
     }
@@ -533,12 +520,6 @@ export default function SyncConsolePage() {
 
   const statusJson = useMemo(() => pretty(statusFetcher.data, t.noStatusLoaded), [statusFetcher.data, t.noStatusLoaded]);
   const settingsJson = useMemo(() => pretty(settingsFetcher.data, t.noSettingsLoaded), [settingsFetcher.data, t.noSettingsLoaded]);
-  const conflictsJson = useMemo(() => pretty(conflictsFetcher.data, t.noConflictsLoaded), [conflictsFetcher.data, t.noConflictsLoaded]);
-  const errorsJson = useMemo(() => pretty(errorsFetcher.data, t.noErrorsLoaded), [errorsFetcher.data, t.noErrorsLoaded]);
-  const resolveJson = useMemo(() => pretty(resolveConflictFetcher.data, t.noResolveAction), [resolveConflictFetcher.data, t.noResolveAction]);
-  const retryJson = useMemo(() => pretty(retryFetcher.data, t.noRetryRequested), [retryFetcher.data, t.noRetryRequested]);
-  const notifyJson = useMemo(() => pretty(notifyTestFetcher.data, t.noNotifyRequested), [notifyTestFetcher.data, t.noNotifyRequested]);
-  const itemDebugJson = useMemo(() => pretty(itemDebugFetcher.data, t.noItemDebugLoaded), [itemDebugFetcher.data, t.noItemDebugLoaded]);
   const runsJson = useMemo(() => pretty(runsFetcher.data, t.noRunHistoryLoaded), [runsFetcher.data, t.noRunHistoryLoaded]);
 
   const latestRun = statusFetcher.data?.latestRun || null;
@@ -576,7 +557,6 @@ export default function SyncConsolePage() {
     statusFetcher.load("/api/sync/status");
     runsFetcher.load("/api/sync/runs?limit=20");
     settingsFetcher.load("/api/settings");
-    conflictsFetcher.load("/api/conflicts");
   };
   const activeConnectedCount = connectedCheckpoints.length;
   const serializedTestItems = useMemo(() => {
@@ -1159,110 +1139,6 @@ export default function SyncConsolePage() {
         </div>
       </s-section>
 
-      <s-section heading={t.debugData}>
-        <s-paragraph>{t.debugDataDesc}</s-paragraph>
-        <details>
-          <summary>{t.resolveConflict}</summary>
-          <div style={{ marginTop: 12 }}>
-            <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
-            <resolveConflictFetcher.Form method="post" action="/api/conflicts">
-              <s-stack direction="block" gap="base">
-                <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
-                  <span>{t.conflictId}</span>
-                  <input type="number" name="conflictId" />
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.note}</span>
-                  <input type="text" name="note" placeholder="resolved manually" />
-                </label>
-                <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
-              </s-stack>
-            </resolveConflictFetcher.Form>
-          </div>
-        </details>
-        <details>
-          <summary>{t.syncErrors}</summary>
-          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-            <s-paragraph>{t.syncErrorsDesc}</s-paragraph>
-            <errorsFetcher.Form method="get" action="/api/sync/errors">
-              <s-stack direction="inline" gap="base">
-                <label style={{ display: "grid", gap: 4 }}>
-                  <span>{t.limit}</span>
-                  <input type="number" name="limit" defaultValue={50} min={1} max={200} />
-                </label>
-                <label style={{ display: "grid", gap: 4 }}>
-                  <span>{t.runIdOptional}</span>
-                  <input type="number" name="runId" placeholder="latest" />
-                </label>
-                <div style={{ alignSelf: "end" }}>
-                  <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>
-                    {t.loadErrors}
-                  </s-button>
-                </div>
-              </s-stack>
-            </errorsFetcher.Form>
-          </div>
-        </details>
-        <details>
-          <summary>{t.syncStatusJson}</summary>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{statusJson}</pre>
-          </s-box>
-        </details>
-        <details>
-          <summary>{t.settingsJson}</summary>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{settingsJson}</pre>
-          </s-box>
-        </details>
-        <details>
-          <summary>{t.conflictsJson}</summary>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{conflictsJson}</pre>
-          </s-box>
-        </details>
-        <details>
-          <summary>{t.syncErrorsJson}</summary>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{errorsJson}</pre>
-          </s-box>
-        </details>
-        <details>
-          <summary>{t.actionsJson}</summary>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-              {`enqueue:\n${enqueueJson}\n\nretry:\n${retryJson}\n\nnotify_test:\n${notifyJson}\n\nresolve:\n${resolveJson}`}
-            </pre>
-          </s-box>
-        </details>
-        <details>
-          <summary>{t.itemDebug}</summary>
-          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-            <s-paragraph>{t.itemDebugDesc}</s-paragraph>
-            <itemDebugFetcher.Form method="get" action="/api/debug/ebay-item">
-              <s-stack direction="inline" gap="base">
-                <label style={{ display: "grid", gap: 4, maxWidth: 220 }}>
-                  <span>{t.itemDebugAccountId}</span>
-                  <input type="number" name="accountId" min={1} placeholder="1" />
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 320 }}>
-                  <span>{t.itemDebugSku}</span>
-                  <input type="text" name="sku" placeholder="A111" />
-                </label>
-                <div style={{ alignSelf: "end" }}>
-                  <s-button type="submit" {...(itemDebugFetcher.state !== "idle" ? { loading: true } : {})}>
-                    {t.itemDebugLoad}
-                  </s-button>
-                </div>
-              </s-stack>
-            </itemDebugFetcher.Form>
-            <s-box padding="base" borderWidth="base" borderRadius="base">
-              <strong>{t.itemDebugJson}</strong>
-              <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>{itemDebugJson}</pre>
-            </s-box>
-          </div>
-        </details>
-      </s-section>
     </s-page>
   );
 }
