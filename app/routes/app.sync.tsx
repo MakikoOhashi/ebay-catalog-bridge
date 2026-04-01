@@ -993,7 +993,7 @@ export default function SyncConsolePage() {
           </>
         ) : null}
         <div style={{ marginTop: 20 }}>
-          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#f8fafc" }}>
+          <s-box padding="base" borderWidth="base" borderRadius="base" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
             <settingsSaveFetcher.Form method="post" action="/api/settings">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                 <div style={{ display: "grid", gap: 4 }}>
@@ -1002,13 +1002,9 @@ export default function SyncConsolePage() {
                 </div>
                 <s-button
                   type="submit"
+                  variant="primary"
                   {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
-                  style={{
-                    background: "#111827",
-                    borderColor: "#111827",
-                    color: "#fff",
-                    minWidth: 160,
-                  }}
+                  style={{ minWidth: 160 }}
                 >
                   {t.saveSettings}
                 </s-button>
