@@ -55,12 +55,17 @@ const textMap = {
     started: "開始",
     processed: "処理",
     created: "作成",
+    createdHelp: "今回、新しくShopifyに作成した件数です。",
     updated: "更新",
+    updatedHelp: "既存のShopify商品を更新した件数です。",
     skipped: "スキップ",
+    skippedHelp: "前回と同じ内容だったため、更新を省略した件数です。",
     conflicts: "競合",
+    conflictsHelp: "別アカウントでも同じSKUが見つかり、同期を止めた件数です。",
     missing: "欠損",
     missingHelp: "過去にShopifyへ同期した商品のうち、今回eBayで見つからなかった件数です。",
     errors: "エラー",
+    errorsHelp: "今回の同期で失敗した件数です。",
     runSync: "手動同期",
     runSyncDesc: "自動同期は夜間に1回だけ実行されます。日中に実データで確認したいときだけ、ここから手動で同期できます。",
     manualSyncButton: "選んだアカウントを同期する",
@@ -209,12 +214,17 @@ const textMap = {
     started: "Started",
     processed: "Processed",
     created: "Created",
+    createdHelp: "Items newly created in Shopify during this run.",
     updated: "Updated",
+    updatedHelp: "Existing Shopify items updated in this run.",
     skipped: "Skipped",
+    skippedHelp: "Items skipped because the content was unchanged from the previous run.",
     conflicts: "Conflicts",
+    conflictsHelp: "Items stopped because the same SKU was found in another account.",
     missing: "Missing",
     missingHelp: "Previously synced Shopify items not found in this eBay sync.",
     errors: "Errors",
+    errorsHelp: "Items that failed during this run.",
     runSync: "Manual Sync",
     runSyncDesc: "Automatic sync runs once during the night. Use this only when you want to sync real eBay data during the day.",
     manualSyncButton: "Sync Selected Accounts",
@@ -1119,12 +1129,12 @@ export default function SyncConsolePage() {
           <span>{t.processed}: {latestRun ? `${latestRun.processedItems}/${latestRun.totalItems}` : "-"}</span>
         </s-stack>
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))", marginTop: 12 }}>
-          {renderSummaryCard(t.created, latestRun?.createdCount ?? 0)}
-          {renderSummaryCard(t.updated, latestRun?.updatedCount ?? 0)}
-          {renderSummaryCard(t.skipped, latestRun?.skippedCount ?? 0)}
-          {renderSummaryCard(t.conflicts, latestRun?.conflictCount ?? 0)}
+          {renderSummaryCard(t.created, latestRun?.createdCount ?? 0, t.createdHelp)}
+          {renderSummaryCard(t.updated, latestRun?.updatedCount ?? 0, t.updatedHelp)}
+          {renderSummaryCard(t.skipped, latestRun?.skippedCount ?? 0, t.skippedHelp)}
+          {renderSummaryCard(t.conflicts, latestRun?.conflictCount ?? 0, t.conflictsHelp)}
           {renderSummaryCard(t.missing, latestRun?.missingCount ?? 0, t.missingHelp)}
-          {renderSummaryCard(t.errors, latestRun?.errorCount ?? 0)}
+          {renderSummaryCard(t.errors, latestRun?.errorCount ?? 0, t.errorsHelp)}
         </div>
         <div style={{ marginTop: 16 }}>
           <s-paragraph>{t.runHistoryDesc}</s-paragraph>
