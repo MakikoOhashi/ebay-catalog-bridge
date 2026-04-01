@@ -167,22 +167,28 @@ export function AppHomeContent({ variant = "home" }: { variant?: Variant }) {
             <s-stack direction="block" gap="base">
             <s-paragraph>{t.contactIntro}</s-paragraph>
 
-            <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
-              <span>{t.contactName}</span>
-              <input type="text" name="name" required />
-            </label>
+            <s-text-field
+              label={t.contactName}
+              name="name"
+              required
+              style={{ width: "100%" }}
+            />
 
-            <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
-              <span>{t.contactEmail}</span>
-              <input type="email" name="email" required />
-            </label>
+            <s-email-field
+              label={t.contactEmail}
+              name="email"
+              required
+              style={{ width: "100%" }}
+            />
 
-            <label style={{ display: "grid", gap: 4, maxWidth: 720 }}>
-              <span>{t.contactMessage}</span>
-              <textarea name="message" rows={8} required />
-            </label>
+            <s-text-area
+              label={t.contactMessage}
+              name="message"
+              required
+              style={{ width: "100%" }}
+            />
 
-            <label style={{ display: "grid", gap: 4, maxWidth: 520 }}>
+            <label style={{ display: "grid", gap: 4, width: "100%" }}>
               <span>{t.contactUpload}</span>
               <input type="file" name="attachment" />
             </label>

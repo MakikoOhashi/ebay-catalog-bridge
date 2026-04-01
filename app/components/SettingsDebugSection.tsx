@@ -110,14 +110,8 @@ export function SettingsDebugSection({ lang }: { lang: Lang }) {
           <s-paragraph>{t.resolveConflictDesc}</s-paragraph>
           <resolveConflictFetcher.Form method="post" action="/api/conflicts">
             <s-stack direction="block" gap="base">
-              <label style={{ display: "grid", gap: 4, maxWidth: 280 }}>
-                <span>{t.conflictId}</span>
-                <input type="number" name="conflictId" />
-              </label>
-              <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                <span>{t.note}</span>
-                <input type="text" name="note" placeholder="resolved manually" />
-              </label>
+              <s-number-field label={t.conflictId} name="conflictId" style={{ width: "100%" }} />
+              <s-text-field label={t.note} name="note" placeholder="resolved manually" style={{ width: "100%" }} />
               <s-button type="submit" {...(resolveConflictFetcher.state !== "idle" ? { loading: true } : {})}>{t.resolve}</s-button>
             </s-stack>
           </resolveConflictFetcher.Form>
@@ -132,14 +126,8 @@ export function SettingsDebugSection({ lang }: { lang: Lang }) {
           <s-paragraph>{t.syncErrorsDesc}</s-paragraph>
           <errorsFetcher.Form method="get" action="/api/sync/errors">
             <s-stack direction="inline" gap="base">
-              <label style={{ display: "grid", gap: 4 }}>
-                <span>{t.limit}</span>
-                <input type="number" name="limit" defaultValue={50} min={1} max={200} />
-              </label>
-              <label style={{ display: "grid", gap: 4 }}>
-                <span>{t.runIdOptional}</span>
-                <input type="number" name="runId" placeholder="latest" />
-              </label>
+              <s-number-field label={t.limit} name="limit" defaultValue={50} min={1} max={200} style={{ width: "100%" }} />
+              <s-number-field label={t.runIdOptional} name="runId" placeholder="latest" style={{ width: "100%" }} />
               <div style={{ alignSelf: "end" }}>
                 <s-button type="submit" {...(errorsFetcher.state !== "idle" ? { loading: true } : {})}>
                   {t.loadErrors}
@@ -176,14 +164,8 @@ export function SettingsDebugSection({ lang }: { lang: Lang }) {
           <s-paragraph>{t.itemDebugDesc}</s-paragraph>
           <itemDebugFetcher.Form method="get" action="/api/debug/ebay-item">
             <s-stack direction="inline" gap="base">
-              <label style={{ display: "grid", gap: 4, maxWidth: 220 }}>
-                <span>{t.itemDebugAccountId}</span>
-                <input type="number" name="accountId" min={1} placeholder="1" />
-              </label>
-              <label style={{ display: "grid", gap: 4, maxWidth: 320 }}>
-                <span>{t.itemDebugSku}</span>
-                <input type="text" name="sku" placeholder="A111" />
-              </label>
+              <s-number-field label={t.itemDebugAccountId} name="accountId" min={1} placeholder="1" style={{ width: "100%" }} />
+              <s-text-field label={t.itemDebugSku} name="sku" placeholder="A111" style={{ width: "100%" }} />
               <div style={{ alignSelf: "end" }}>
                 <s-button type="submit" {...(itemDebugFetcher.state !== "idle" ? { loading: true } : {})}>
                   {t.itemDebugLoad}

@@ -763,27 +763,26 @@ export default function SyncConsolePage() {
           <s-stack direction="block" gap="base" style={{ marginTop: 0 }}>
             <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
               <div style={{ display: "grid", gap: 16 }}>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.syncFrequency}</span>
+                <div style={{ display: "grid", gap: 4 }}>
                   <input type="hidden" name="syncFrequencyMinutes" value="1440" />
-                  <input type="text" value={t.nightlyBatch} disabled />
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
+                  <s-text-field
+                    label={t.syncFrequency}
+                    value={t.nightlyBatch}
+                    disabled
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
                   <span>{t.syncFields}</span>
-                  <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
                     {syncFieldOptions.map((option) => (
-                      <label key={option.value} style={{ display: "inline-flex", gap: 8 }}>
-                        <input
-                          type="checkbox"
-                          name="syncFields"
-                          value={option.value}
-                          defaultChecked={
-                            currentSettings?.syncFields?.includes(option.value) ??
-                            true
-                          }
-                        />
-                        <span>{t[option.labelKey]}</span>
-                      </label>
+                      <s-checkbox
+                        key={option.value}
+                        label={t[option.labelKey]}
+                        name="syncFields"
+                        value={option.value}
+                        defaultChecked={currentSettings?.syncFields?.includes(option.value) ?? true}
+                      />
                     ))}
                   </div>
                   <small>{t.syncFieldsHelp}</small>
@@ -810,61 +809,59 @@ export default function SyncConsolePage() {
                   >
                     {t.imageSyncNote}
                   </div>
-                </label>
-                <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                  <span>{t.slackNotifyWebhookUrl}</span>
-                  <input
-                    type="url"
-                    name="slackNotifyWebhookUrl"
-                    placeholder="https://hooks.slack.com/services/..."
-                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
-                  />
-                  <small>{t.slackNotifyWebhookUrlHelp}</small>
-                  <small>
-                    {t.slackNotifyWebhookUrlHowTo}{" "}
-                    <a
-                      href="https://api.slack.com/messaging/webhooks"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t.slackNotifyWebhookUrlHelpLink}
-                    </a>
-                  </small>
-                </label>
+                </div>
+                <s-url-field
+                  label={t.slackNotifyWebhookUrl}
+                  name="slackNotifyWebhookUrl"
+                  placeholder="https://hooks.slack.com/services/..."
+                  defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+                  details={
+                    <span>
+                      {t.slackNotifyWebhookUrlHelp}{" "}
+                      <a
+                        href="https://api.slack.com/messaging/webhooks"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t.slackNotifyWebhookUrlHelpLink}
+                      </a>
+                    </span>
+                  }
+                  style={{ width: "100%" }}
+                />
               </div>
 
               <div style={{ display: "grid", gap: 16 }}>
-                <label style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                   <input type="hidden" name="priceSyncEnabled" value="false" />
-                  <input
-                    type="checkbox"
+                  <s-checkbox
+                    label={t.enablePriceSync}
                     name="priceSyncEnabled"
                     value="true"
                     checked={priceSyncEnabledDraft}
-                    onChange={(event) => setPriceSyncEnabledDraft(event.currentTarget.checked)}
+                    onChange={(event) => setPriceSyncEnabledDraft((event.target as HTMLInputElement).checked)}
                   />
-                  <span>{t.enablePriceSync}</span>
-                </label>
+                </div>
                 <div style={{ display: priceSyncEnabledDraft ? "grid" : "none", gap: 16 }}>
-                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                      <span>{t.fxRateMode}</span>
-                      <select
+                  <div style={{ display: "grid", gap: 4 }}>
+                      <s-select
+                        label={t.fxRateMode}
                         name="fxRateMode"
                         value={selectedFxRateMode}
                         onChange={(event) =>
-                          setSelectedFxRateMode(event.currentTarget.value === "auto" ? "auto" : "fixed")
+                          setSelectedFxRateMode((event.target as HTMLSelectElement).value === "auto" ? "auto" : "fixed")
                         }
+                        style={{ width: "100%" }}
                       >
-                        <option value="fixed">{t.fxModeFixed}</option>
-                        <option value="auto">{t.fxModeAuto}</option>
-                      </select>
+                        <s-option value="fixed">{t.fxModeFixed}</s-option>
+                        <s-option value="auto">{t.fxModeAuto}</s-option>
+                      </s-select>
                       <small>{t.fxModeHelp}</small>
                       {selectedFxRateMode === "auto" ? (
                         <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
                       ) : null}
-                  </label>
-                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                      <span>{t.fixedFxRate}</span>
+                  </div>
+                  <div style={{ display: "grid", gap: 4 }}>
                       {selectedFxRateMode === "auto" ? (
                         <input
                           type="hidden"
@@ -872,42 +869,47 @@ export default function SyncConsolePage() {
                           value={currentSettings?.fixedFxRate ?? 150}
                         />
                       ) : null}
-                      <input
-                        type="number"
+                      <s-number-field
+                        label={t.fixedFxRate}
                         name="fixedFxRate"
                         step="0.01"
                         defaultValue={currentSettings?.fixedFxRate ?? 150}
                         disabled={selectedFxRateMode === "auto"}
+                        style={{ width: "100%" }}
                       />
-                  </label>
-                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                      <span>{t.priceAdjustmentPercent}</span>
-                      <input
-                        type="number"
+                  </div>
+                  <div style={{ display: "grid", gap: 4 }}>
+                      <s-number-field
+                        label={t.priceAdjustmentPercent}
                         name="priceAdjustmentPercent"
                         step="0.01"
                         defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+                        style={{ width: "100%" }}
                       />
                       <small>{t.priceAdjustmentPercentHelp}</small>
-                  </label>
-                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                      <span>{t.priceAdjustmentFixed}</span>
-                      <input
-                        type="number"
+                  </div>
+                  <div style={{ display: "grid", gap: 4 }}>
+                      <s-number-field
+                        label={t.priceAdjustmentFixed}
                         name="priceAdjustmentFixed"
                         step="0.01"
                         defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+                        style={{ width: "100%" }}
                       />
                       <small>{t.priceAdjustmentFixedHelp}</small>
-                  </label>
-                  <label style={{ display: "grid", gap: 4, maxWidth: 420 }}>
-                      <span>{t.roundRule}</span>
-                      <select name="roundRule" defaultValue={currentSettings?.roundRule ?? "nearest"}>
-                        <option value="nearest">{t.roundNearest}</option>
-                        <option value="up">{t.roundUp}</option>
-                        <option value="down">{t.roundDown}</option>
-                      </select>
-                  </label>
+                  </div>
+                  <div style={{ display: "grid", gap: 4 }}>
+                      <s-select
+                        label={t.roundRule}
+                        name="roundRule"
+                        value={currentSettings?.roundRule ?? "nearest"}
+                        style={{ width: "100%" }}
+                      >
+                        <s-option value="nearest">{t.roundNearest}</s-option>
+                        <s-option value="up">{t.roundUp}</s-option>
+                        <s-option value="down">{t.roundDown}</s-option>
+                      </s-select>
+                  </div>
                 </div>
                 {!priceSyncEnabledDraft ? (
                   <s-paragraph style={{ margin: 0 }}>
@@ -993,17 +995,16 @@ export default function SyncConsolePage() {
                 <input type="hidden" name="mode" value="rolling" />
                 <input type="hidden" name="fullScanComplete" value="false" />
                 <input type="hidden" name="itemsJson" value={serializedTestItems} />
-                <label style={{ display: "grid", gap: 4, maxWidth: 360, marginTop: 12 }}>
-                  <span>{t.reflectTestAccount}</span>
-                  <select name="ebayAccountId" defaultValue="">
-                    <option value="">{t.selectAccountPlaceholder}</option>
+                <div style={{ display: "grid", gap: 4, maxWidth: 360, marginTop: 12 }}>
+                  <s-select label={t.reflectTestAccount} name="ebayAccountId" defaultValue="">
+                    <s-option value="">{t.selectAccountPlaceholder}</s-option>
                     {connectedCheckpoints.map((checkpoint) => (
-                      <option key={checkpoint.ebayAccountId} value={checkpoint.ebayAccountId}>
+                      <s-option key={checkpoint.ebayAccountId} value={String(checkpoint.ebayAccountId)}>
                         #{checkpoint.ebayAccountId} ({checkpoint.ebayUserId?.trim() || checkpoint.label}) - {checkpoint.status}
-                      </option>
+                      </s-option>
                     ))}
-                  </select>
-                </label>
+                  </s-select>
+                </div>
                 {testItems.map((item, index) => (
                   <div
                     key={`test-item-${index}`}
