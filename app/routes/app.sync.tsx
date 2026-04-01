@@ -52,6 +52,7 @@ const textMap = {
     loadConflicts: "競合を読み込む",
     latestSummary: "最新実行サマリー",
     latestSummaryDesc: "直近1回の同期結果を要点だけ表示します。",
+    runHistoryTitle: "最近の同期一覧",
     runId: "実行ID",
     started: "開始",
     processed: "処理",
@@ -211,6 +212,7 @@ const textMap = {
     loadConflicts: "Load Conflicts",
     latestSummary: "Latest Run Summary",
     latestSummaryDesc: "Shows key metrics from the latest sync run.",
+    runHistoryTitle: "Recent sync history",
     runId: "Run ID",
     started: "Started",
     processed: "Processed",
@@ -994,8 +996,19 @@ export default function SyncConsolePage() {
           </>
         ) : null}
         <settingsSaveFetcher.Form method="post" action="/api/settings">
-          <s-stack direction="block" gap="base" style={{ marginTop: 0 }}>
-            <s-button type="submit" {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
+          <s-stack direction="block" gap="base" style={{ marginTop: 20 }}>
+            <s-button
+              type="submit"
+              {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}
+              style={{
+                background: "#111827",
+                borderColor: "#111827",
+                color: "#fff",
+                minWidth: 160,
+              }}
+            >
+              {t.saveSettings}
+            </s-button>
           </s-stack>
         </settingsSaveFetcher.Form>
       </s-section>
@@ -1182,45 +1195,52 @@ export default function SyncConsolePage() {
           {renderSummaryCard(t.errors, latestRun?.errorCount ?? 0, t.errorsHelp)}
         </div>
         <div style={{ marginTop: 16 }}>
-          <s-paragraph>{t.runHistoryDesc}</s-paragraph>
-          <s-box padding="base" borderWidth="base" borderRadius="base">
-            {runs.length === 0 ? (
-              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th align="left">{t.run}</th>
-                      <th align="left">{t.status}</th>
-                      <th align="left">{t.mode}</th>
-                      <th align="left">{t.started}</th>
-                      <th align="left">{t.processed}</th>
-                      <th align="left">{t.created}</th>
-                      <th align="left">{t.updated}</th>
-                      <th align="left">{t.errors}</th>
-                      <th align="left">{t.missing}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.map((run) => (
-                      <tr key={run.id}>
-                        <td>{run.id}</td>
-                        <td>{run.status}</td>
-                        <td>{run.mode}</td>
-                        <td>{formatDate(run.startedAt)}</td>
-                        <td>{`${run.processedItems}/${run.totalItems}`}</td>
-                        <td>{run.createdCount}</td>
-                        <td>{run.updatedCount}</td>
-                        <td>{run.errorCount}</td>
-                        <td>{run.missingCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </s-box>
+          <details style={{ borderRadius: 12, border: "1px solid var(--s-color-border-default)", padding: 16 }}>
+            <summary style={{ cursor: "pointer", listStyle: "none", display: "grid", gap: 4 }}>
+              <div style={{ color: "#0f172a", fontSize: 16, fontWeight: 700 }}>{t.runHistoryTitle}</div>
+              <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>{t.runHistoryDesc}</div>
+            </summary>
+            <div style={{ marginTop: 12 }}>
+              <s-box padding="base" borderWidth="base" borderRadius="base">
+                {runs.length === 0 ? (
+                  <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{runsJson}</pre>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th align="left">{t.run}</th>
+                          <th align="left">{t.status}</th>
+                          <th align="left">{t.mode}</th>
+                          <th align="left">{t.started}</th>
+                          <th align="left">{t.processed}</th>
+                          <th align="left">{t.created}</th>
+                          <th align="left">{t.updated}</th>
+                          <th align="left">{t.errors}</th>
+                          <th align="left">{t.missing}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {runs.map((run) => (
+                          <tr key={run.id}>
+                            <td>{run.id}</td>
+                            <td>{run.status}</td>
+                            <td>{run.mode}</td>
+                            <td>{formatDate(run.startedAt)}</td>
+                            <td>{`${run.processedItems}/${run.totalItems}`}</td>
+                            <td>{run.createdCount}</td>
+                            <td>{run.updatedCount}</td>
+                            <td>{run.errorCount}</td>
+                            <td>{run.missingCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </s-box>
+            </div>
+          </details>
         </div>
       </s-section>
 
