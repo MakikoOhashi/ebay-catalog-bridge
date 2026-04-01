@@ -868,32 +868,52 @@ async function getExistingProductImageUrls(
   admin: ShopifyAdminClient,
   productId: string,
 ): Promise<string[]> {
-  const json = await graphqlJson(
-    admin,
-    `#graphql
-      query productImages($id: ID!) {
-        product(id: $id) {
-          media(first: 20) {
-            nodes {
-              ... on MediaImage {
-                image {
-                  url
+  const urls: string[] = [];
+  let cursor: string | null = null;
+
+  for (;;) {
+    const json = await graphqlJson(
+      admin,
+      `#graphql
+        query productImages($id: ID!, $after: String) {
+          product(id: $id) {
+            media(first: 100, after: $after) {
+              nodes {
+                ... on MediaImage {
+                  image {
+                    url
+                  }
                 }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
               }
             }
           }
-        }
-      }`,
-    { id: productId },
-  );
+        }`,
+      { id: productId, after: cursor },
+    );
 
-  const nodes =
-    ((((json.data as Record<string, unknown> | undefined)?.product as Record<string, unknown> | undefined)
-      ?.media as Record<string, unknown> | undefined)?.nodes as Array<Record<string, unknown>> | undefined) || [];
+    const media = ((((json.data as Record<string, unknown> | undefined)?.product as Record<
+      string,
+      unknown
+    > | undefined)?.media as Record<string, unknown> | undefined) || {}) as Record<string, unknown>;
+    const nodes =
+      (media.nodes as Array<Record<string, unknown>> | undefined) || [];
+    const pageInfo = (media.pageInfo as Record<string, unknown> | undefined) || {};
 
-  return nodes
-    .map((node) => ((node.image as Record<string, unknown> | undefined)?.url as string | undefined) || null)
-    .filter((url): url is string => Boolean(url));
+    urls.push(
+      ...nodes
+        .map((node) => ((node.image as Record<string, unknown> | undefined)?.url as string | undefined) || null)
+        .filter((url): url is string => Boolean(url)),
+    );
+
+    if (pageInfo.hasNextPage !== true || !pageInfo.endCursor) break;
+    cursor = pageInfo.endCursor as string;
+  }
+
+  return urls;
 }
 
 async function syncShopifyProductImages(input: {
@@ -901,7 +921,7 @@ async function syncShopifyProductImages(input: {
   productId: string;
   imageUrls?: string[];
 }): Promise<string | null> {
-  const incomingUrls = uniqueUrls(input.imageUrls || []);
+  const incomingUrls = uniqueUrls(input.imageUrls || []).slice(0, 20);
   if (incomingUrls.length === 0) return null;
 
   const existingUrls = await getExistingProductImageUrls(input.admin, input.productId);
