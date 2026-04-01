@@ -577,8 +577,29 @@ export default function SyncConsolePage() {
     [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
   );
   const missingLabel = (
-    <span title={t.missingHelp} style={{ textDecoration: "underline dotted", cursor: "help" }}>
-      {t.missing}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <span>{t.missing}</span>
+      <s-tooltip id="missing-tooltip">
+        {t.missingHelp}
+      </s-tooltip>
+      <span
+        aria-describedby="missing-tooltip"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 16,
+          height: 16,
+          borderRadius: 999,
+          border: "1px solid #cbd5e1",
+          color: "#475569",
+          fontSize: 11,
+          lineHeight: 1,
+          cursor: "help",
+        }}
+      >
+        ?
+      </span>
     </span>
   );
 
