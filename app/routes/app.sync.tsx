@@ -650,14 +650,9 @@ export default function SyncConsolePage() {
   };
 
   const renderStepHeading = (label: string) => (
-    <s-heading
-      accessibilityRole="heading"
-      accessibilityVisibility="visible"
-      lineClamp={1}
-      style={{ marginTop: 8, marginBottom: 10, fontSize: 18, fontWeight: 700, lineHeight: 1.3 }}
-    >
+    <div style={{ marginTop: 8, marginBottom: 10, color: "#0f172a", fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>
       {label}
-    </s-heading>
+    </div>
   );
 
   const renderSummaryCard = (label: string, value: number | string, help?: string) => (
@@ -1219,12 +1214,12 @@ export default function SyncConsolePage() {
                 aria-hidden="true"
                 style={{
                   display: "inline-flex",
-                  width: 18,
-                  height: 18,
+                  width: 20,
+                  height: 20,
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#475569",
-                  fontSize: 16,
+                  fontSize: 18,
                   lineHeight: 1,
                   transform: "translateY(1px)",
                   transition: "transform 160ms ease",
