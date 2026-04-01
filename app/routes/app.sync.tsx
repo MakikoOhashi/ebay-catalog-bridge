@@ -989,6 +989,12 @@ export default function SyncConsolePage() {
                       {t.slackNotifyWebhookUrlHelpLink}
                     </a>
                   </small>
+                  <small style={{ color: "#64748b", lineHeight: 1.5 }}>Slackの通知テストを送信します。</small>
+                  <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
+                    <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>
+                      {t.sendTestAlert}
+                    </s-button>
+                  </notifyTestFetcher.Form>
                 </div>
               </s-box>
             </div>
@@ -1070,9 +1076,6 @@ export default function SyncConsolePage() {
             <retryFetcher.Form method="post" action="/api/sync/retry">
               <s-button type="submit" {...(retryFetcher.state !== "idle" ? { loading: true } : {})}>{t.retryLatest}</s-button>
             </retryFetcher.Form>
-            <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
-              <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>{t.sendTestAlert}</s-button>
-            </notifyTestFetcher.Form>
           </s-stack>
         </s-box>
 
