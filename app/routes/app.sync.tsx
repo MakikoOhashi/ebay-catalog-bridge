@@ -632,7 +632,12 @@ export default function SyncConsolePage() {
   };
 
   const renderStepHeading = (label: string) => (
-    <s-heading accessibilityRole="heading" accessibilityVisibility="visible" lineClamp={1} style={{ marginBottom: 12 }}>
+    <s-heading
+      accessibilityRole="heading"
+      accessibilityVisibility="visible"
+      lineClamp={1}
+      style={{ marginTop: 8, marginBottom: 10, fontSize: 22, fontWeight: 700, lineHeight: 1.25 }}
+    >
       {label}
     </s-heading>
   );
