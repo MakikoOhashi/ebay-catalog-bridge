@@ -14,6 +14,7 @@ function pretty(data: unknown, empty = "No data yet.") {
 }
 
 type Lang = "ja" | "en";
+const RUN_HISTORY_LIMIT = 10;
 
 const textMap = {
   ja: {
@@ -43,7 +44,7 @@ const textMap = {
     syncAccount: "同期対象アカウント",
     selectAccountPlaceholder: "アカウントを選んでください",
     selectManualAccounts: "手動同期するアカウント",
-    manualSyncTargetsHelp: "必要なアカウントだけチェックして同期できます。複数選択も可能です。",
+    manualSyncTargetsHelp: "eBayの実データをShopifyへ同期するアカウントだけを選んでください。複数選択も可能です。",
     refreshStatus: "接続状態を更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
@@ -61,15 +62,15 @@ const textMap = {
     missingHelp: "過去にShopifyへ同期した商品が、今回の同期ではeBayで見つからなかった件数です。",
     errors: "エラー",
     runSync: "手動同期",
-    runSyncDesc: "自動同期は夜間に1回だけ実行されます。日中に確認したいときだけ、ここから手動で同期できます。",
+    runSyncDesc: "自動同期は夜間に1回だけ実行されます。日中に実データで確認したいときだけ、ここから手動で同期できます。",
     manualSyncButton: "選んだアカウントを同期する",
     manualSyncRunning: "手動同期を実行中です...",
     manualSyncNoSelection: "手動同期するアカウントを1つ以上選んでください。",
-    reflectTestAccount: "テストに使うアカウント",
-    reflectTestRun: "反映テストを実行",
-    reflectTest: "反映テスト（任意）",
-    reflectTestDesc: "入力した商品をテスト用に追加して、反映される内容を確認できます。確認用の機能なので、本番データをそのまま登録するものではありません。",
-    reflectTestEmpty: "通常のeBay同期では、この入力は空欄のままでOKです。",
+    reflectTestAccount: "テスト入力を流すアカウント",
+    reflectTestRun: "テスト反映を実行",
+    reflectTest: "入力テスト（任意）",
+    reflectTestDesc: "この画面で入力したテスト商品を使って、SKUや価格がShopifyにどう反映されるか確認できます。eBayの実データを取りに行く機能ではありません。",
+    reflectTestEmpty: "通常のeBay同期では使いません。空欄のままでOKです。",
     testItem: "テスト商品",
     sku: "SKU",
     itemId: "Item ID",
@@ -197,7 +198,7 @@ const textMap = {
     syncAccount: "Sync Account",
     selectAccountPlaceholder: "Select an account",
     selectManualAccounts: "Accounts To Sync Manually",
-    manualSyncTargetsHelp: "Check only the accounts you want to sync. Multiple selection is supported.",
+    manualSyncTargetsHelp: "Select only the accounts whose real eBay data you want to sync. Multiple selection is supported.",
     refreshStatus: "Refresh Connection Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
@@ -215,15 +216,15 @@ const textMap = {
     missingHelp: "Products previously synced to Shopify that were not found in this eBay sync.",
     errors: "Errors",
     runSync: "Manual Sync",
-    runSyncDesc: "Automatic sync runs once during the night. Use this section only when you want to run a manual sync during the day.",
+    runSyncDesc: "Automatic sync runs once during the night. Use this only when you want to sync real eBay data during the day.",
     manualSyncButton: "Sync Selected Accounts",
     manualSyncRunning: "Running manual sync...",
     manualSyncNoSelection: "Select at least one account for manual sync.",
-    reflectTestAccount: "Account For Test Sync",
-    reflectTestRun: "Run Reflection Test",
-    reflectTest: "Reflection Test (optional)",
-    reflectTestDesc: "You can add test products here to preview how they would sync. This is for testing only and does not directly register production data.",
-    reflectTestEmpty: "For normal eBay sync, leave this section empty.",
+    reflectTestAccount: "Account For Test Input",
+    reflectTestRun: "Run Test Reflection",
+    reflectTest: "Input Test (optional)",
+    reflectTestDesc: "Use the test products entered in this section to preview how SKU and pricing would reflect in Shopify. This does not fetch real eBay data.",
+    reflectTestEmpty: "For normal eBay sync, leave this empty.",
     testItem: "Test Item",
     sku: "SKU",
     itemId: "Item ID",
@@ -485,7 +486,7 @@ export default function SyncConsolePage() {
   useEffect(() => {
     if (!clientReady) return;
     statusFetcher.load("/api/sync/status");
-    runsFetcher.load("/api/sync/runs?limit=20");
+    runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     settingsFetcher.load("/api/settings");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientReady]);
@@ -493,7 +494,7 @@ export default function SyncConsolePage() {
   useEffect(() => {
     if (disconnectFetcher.data && disconnectFetcher.state === "idle") {
       statusFetcher.load("/api/sync/status");
-      runsFetcher.load("/api/sync/runs?limit=20");
+      runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disconnectFetcher.data, disconnectFetcher.state]);
@@ -501,7 +502,7 @@ export default function SyncConsolePage() {
   useEffect(() => {
     if (enqueueFetcher.data && enqueueFetcher.state === "idle") {
       statusFetcher.load("/api/sync/status");
-      runsFetcher.load("/api/sync/runs?limit=20");
+      runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enqueueFetcher.data, enqueueFetcher.state]);
@@ -509,7 +510,7 @@ export default function SyncConsolePage() {
   useEffect(() => {
     if (retryFetcher.data && retryFetcher.state === "idle") {
       statusFetcher.load("/api/sync/status");
-      runsFetcher.load("/api/sync/runs?limit=20");
+      runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryFetcher.data, retryFetcher.state]);
@@ -558,7 +559,7 @@ export default function SyncConsolePage() {
   const checkpointByLabel = new Map(checkpoints.map((c) => [c.label, c]));
   const refreshAll = () => {
     statusFetcher.load("/api/sync/status");
-    runsFetcher.load("/api/sync/runs?limit=20");
+    runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     settingsFetcher.load("/api/settings");
   };
   const activeConnectedCount = connectedCheckpoints.length;
@@ -624,7 +625,7 @@ export default function SyncConsolePage() {
         results,
       });
       statusFetcher.load("/api/sync/status");
-      runsFetcher.load("/api/sync/runs?limit=20");
+      runsFetcher.load(`/api/sync/runs?limit=${RUN_HISTORY_LIMIT}`);
     } catch (error) {
       setManualSyncError(error instanceof Error ? error.message : t.unknown);
     } finally {
