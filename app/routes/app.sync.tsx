@@ -45,7 +45,7 @@ const textMap = {
     syncAccount: "同期対象アカウント",
     selectAccountPlaceholder: "アカウントを選んでください",
     selectManualAccounts: "手動同期するアカウント",
-    manualSyncTargetsHelp: "eBayの実データをShopifyへ同期するアカウントだけを選んでください。複数選択も可能です。",
+    manualSyncTargetsHelp: "同期したい eBay アカウントだけを選んでください。複数選択も可能です。",
     refreshStatus: "接続状態を更新",
     loadRunHistory: "実行履歴を読み込む",
     loadSettings: "設定を読み込む",
@@ -87,7 +87,7 @@ const textMap = {
     advancedJson: "高度な入力（JSONを直接編集）",
     advancedJsonDesc: "通常は使いません。必要なときだけJSONを直接入力できます。",
     forceFullScan: "見つからなかった商品を売り切れにする",
-    forceFullScanHelp: "選んだ eBay アカウントで、前回はあったのに今回の同期で見つからなかった商品を、Shopifyで在庫0・売り切れにします。",
+    forceFullScanHelp: "前回はあったのに、今回の同期で見つからなかった商品を Shopify で売り切れにします。",
     accountIdFallbackNote: "eBay ID がまだ表示されない場合は、そのアカウントを一度つなぎ直すと反映されます。",
     enqueueSync: "この内容で同期する",
     retryLatest: "最新Runを再試行",
@@ -206,7 +206,7 @@ const textMap = {
     syncAccount: "Sync Account",
     selectAccountPlaceholder: "Select an account",
     selectManualAccounts: "Accounts To Sync Manually",
-    manualSyncTargetsHelp: "Select only the accounts whose real eBay data you want to sync. Multiple selection is supported.",
+    manualSyncTargetsHelp: "Select only the eBay accounts you want to sync. Multiple selection is supported.",
     refreshStatus: "Refresh Connection Status",
     loadRunHistory: "Load Run History",
     loadSettings: "Load Settings",
@@ -248,7 +248,7 @@ const textMap = {
     advancedJson: "Advanced Input (edit JSON directly)",
     advancedJsonDesc: "You usually do not need this. Use only when you want to enter raw JSON manually.",
     forceFullScan: "Mark missing products as sold out",
-    forceFullScanHelp: "For the selected eBay account only, products that were seen before but not found in this sync will be set to zero inventory and sold out in Shopify.",
+    forceFullScanHelp: "For the selected eBay account only, products seen before but not found in this sync will be marked sold out in Shopify.",
     accountIdFallbackNote: "If the eBay ID is not shown yet, reconnecting that account once should populate it.",
     enqueueSync: "Run Sync Now",
     retryLatest: "Retry Latest Run",
@@ -989,12 +989,12 @@ export default function SyncConsolePage() {
                       {t.slackNotifyWebhookUrlHelpLink}
                     </a>
                   </small>
-                  <small style={{ color: "#64748b", lineHeight: 1.5 }}>Slackの通知テストを送信します。</small>
                   <notifyTestFetcher.Form method="post" action="/api/sync/notify-test">
                     <s-button type="submit" {...(notifyTestFetcher.state !== "idle" ? { loading: true } : {})}>
                       {t.sendTestAlert}
                     </s-button>
                   </notifyTestFetcher.Form>
+                  <small style={{ color: "#64748b", lineHeight: 1.5, marginTop: 4 }}>Slackの通知テストを送信します。</small>
                 </div>
               </s-box>
             </div>
