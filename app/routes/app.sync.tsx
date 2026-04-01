@@ -1196,10 +1196,46 @@ export default function SyncConsolePage() {
         </div>
         <div style={{ marginTop: 16 }}>
           <details style={{ borderRadius: 12, border: "1px solid var(--s-color-border-default)", padding: 16 }}>
-            <summary style={{ cursor: "pointer", listStyle: "none", display: "grid", gap: 4 }}>
-              <div style={{ color: "#0f172a", fontSize: 16, fontWeight: 700 }}>{t.runHistoryTitle}</div>
-              <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>{t.runHistoryDesc}</div>
+            <summary
+              style={{
+                cursor: "pointer",
+                listStyle: "none",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "inline-flex",
+                  width: 18,
+                  height: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#475569",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  transform: "translateY(1px)",
+                  transition: "transform 160ms ease",
+                }}
+                className="run-history-chevron"
+              >
+                ▸
+              </span>
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ color: "#0f172a", fontSize: 16, fontWeight: 700 }}>{t.runHistoryTitle}</div>
+                <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>{t.runHistoryDesc}</div>
+              </div>
             </summary>
+            <style>{`
+              details[open] > summary .run-history-chevron {
+                transform: translateY(1px) rotate(90deg);
+              }
+              details > summary::-webkit-details-marker {
+                display: none;
+              }
+            `}</style>
             <div style={{ marginTop: 12 }}>
               <s-box padding="base" borderWidth="base" borderRadius="base">
                 {runs.length === 0 ? (
