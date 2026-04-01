@@ -14,6 +14,7 @@ function pretty(data: unknown, empty = "No data yet.") {
 }
 
 type Lang = "ja" | "en";
+type SettingsTab = "sync" | "price" | "notify";
 const RUN_HISTORY_LIMIT = 10;
 
 const textMap = {
@@ -458,6 +459,7 @@ export default function SyncConsolePage() {
   const [advancedItemsJson, setAdvancedItemsJson] = useState("");
   const [selectedFxRateMode, setSelectedFxRateMode] = useState<"fixed" | "auto">("fixed");
   const [priceSyncEnabledDraft, setPriceSyncEnabledDraft] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("sync");
   const [manualSyncAccountIds, setManualSyncAccountIds] = useState<string[]>([]);
   const [manualFullScanComplete, setManualFullScanComplete] = useState(false);
   const [manualSyncResult, setManualSyncResult] = useState<unknown>(null);
@@ -671,37 +673,31 @@ export default function SyncConsolePage() {
     </div>
   );
 
-  const renderSettingsCard = (
+  const renderSettingsTabCard = (
+    tab: SettingsTab,
     title: string,
     headline: string,
     summary: string,
-    details: Array<[string, string]>,
   ) => (
-    <details
+    <button
+      type="button"
+      onClick={() => setSettingsTab(tab)}
       style={{
-        border: "1px solid var(--s-color-border-default)",
+        border: settingsTab === tab ? "1px solid #2563eb" : "1px solid var(--s-color-border-default)",
         borderRadius: 12,
         padding: 16,
-        background: "white",
+        background: settingsTab === tab ? "#eff6ff" : "white",
+        textAlign: "left",
+        cursor: "pointer",
+        display: "grid",
+        gap: 4,
+        boxShadow: settingsTab === tab ? "0 0 0 1px rgba(37, 99, 235, 0.08)" : "none",
       }}
     >
-      <summary
-        style={{
-          cursor: "pointer",
-          listStyle: "none",
-          display: "grid",
-          gap: 4,
-          outline: "none",
-        }}
-      >
-        <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600 }}>{title}</div>
-        <div style={{ color: "#0f172a", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{headline}</div>
-        <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>{summary}</div>
-      </summary>
-      <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-        {details.map(([label, value]) => renderSettingRow(label, value))}
-      </div>
-    </details>
+      <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600 }}>{title}</div>
+      <div style={{ color: "#0f172a", fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{headline}</div>
+      <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>{summary}</div>
+    </button>
   );
 
   return (
@@ -816,198 +812,189 @@ export default function SyncConsolePage() {
         {currentSettings ? (
           <>
             <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-              {renderSettingsCard(
+              {renderSettingsTabCard(
+                "sync",
                 lang === "ja" ? "同期設定" : "Sync settings",
                 t.nightlyBatch,
                 `${t.syncFields}: ${currentSettings.syncFields.join(", ")}`,
-                [
-                  [t.syncFrequency, t.nightlyBatch],
-                  [t.syncFields, currentSettings.syncFields.join(", ")],
-                ],
               )}
-              {renderSettingsCard(
+              {renderSettingsTabCard(
+                "price",
                 lang === "ja" ? "価格設定" : "Price settings",
                 currentSettings.priceSyncEnabled ? "ON" : "OFF",
                 `${t.fxRateMode}: ${currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed}`,
-                [
-                  [t.enablePriceSync, currentSettings.priceSyncEnabled ? "ON" : "OFF"],
-                  [t.fxRateMode, currentSettings.fxRateMode === "auto" ? t.fxModeAuto : t.fxModeFixed],
-                  [t.fixedFxRate, String(currentSettings.fixedFxRate)],
-                  [t.priceAdjustmentPercent, `${currentSettings.priceAdjustmentPercent}%`],
-                  [t.priceAdjustmentFixed, String(currentSettings.priceAdjustmentFixed)],
-                  [t.autoFxPair, autoFxPairLabel],
-                  [t.autoFxLastRate, autoFxRateLabel],
-                  [t.autoFxLastFetchedAt, formatDate(currentSettings.autoFxLastFetchedAt)],
-                  [t.roundRule, currentSettings.roundRule],
-                ],
               )}
-              {renderSettingsCard(
+              {renderSettingsTabCard(
+                "notify",
                 lang === "ja" ? "通知設定" : "Notification settings",
                 currentSettings.slackNotifyWebhookUrl ? "Configured" : "-",
                 t.slackNotifyWebhookUrl,
-                [[t.slackNotifyWebhookUrl, currentSettings.slackNotifyWebhookUrl ? "Configured" : "-"]],
               )}
             </div>
-            <div style={{ height: 24 }} />
+            <div style={{ marginTop: 16 }}>
+              <s-box padding="base" borderWidth="base" borderRadius="base">
+                <div style={{ display: settingsTab === "sync" ? "grid" : "none", gap: 16 }}>
+                  <div style={{ display: "grid", gap: 4 }}>
+                    <input type="hidden" name="syncFrequencyMinutes" value="1440" />
+                    <s-text-field
+                      label={t.syncFrequency}
+                      value={t.nightlyBatch}
+                      disabled
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <span>{t.syncFields}</span>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {syncFieldOptions.map((option) => (
+                        <s-checkbox
+                          key={option.value}
+                          label={t[option.labelKey]}
+                          name="syncFields"
+                          value={option.value}
+                          defaultChecked={currentSettings?.syncFields?.includes(option.value) ?? true}
+                        />
+                      ))}
+                    </div>
+                    <small>{t.syncFieldsHelp}</small>
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        background: "#f8fafc",
+                        color: "#334155",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      <strong>{t.weightSyncNote}</strong>
+                      <div>{t.weightSyncNoteDesc}</div>
+                    </div>
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        background: "#f8fafc",
+                        color: "#334155",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      <strong>{t.imageSyncNote}</strong>
+                      <div>{t.imageSyncNoteDesc}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: settingsTab === "price" ? "grid" : "none", gap: 16 }}>
+                  <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                    <input type="hidden" name="priceSyncEnabled" value="false" />
+                    <s-checkbox
+                      label={t.enablePriceSync}
+                      name="priceSyncEnabled"
+                      value="true"
+                      checked={priceSyncEnabledDraft}
+                      onChange={(event) => setPriceSyncEnabledDraft((event.target as HTMLInputElement).checked)}
+                    />
+                  </div>
+                  <div style={{ display: priceSyncEnabledDraft ? "grid" : "none", gap: 16 }}>
+                    <div style={{ display: "grid", gap: 4 }}>
+                        <s-select
+                          label={t.fxRateMode}
+                          name="fxRateMode"
+                          value={selectedFxRateMode}
+                          onChange={(event) =>
+                            setSelectedFxRateMode((event.target as HTMLSelectElement).value === "auto" ? "auto" : "fixed")
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          <s-option value="fixed">{t.fxModeFixed}</s-option>
+                          <s-option value="auto">{t.fxModeAuto}</s-option>
+                        </s-select>
+                        <small>{t.fxModeHelp}</small>
+                        {selectedFxRateMode === "auto" ? (
+                          <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
+                        ) : null}
+                    </div>
+                    <div style={{ display: "grid", gap: 4 }}>
+                        {selectedFxRateMode === "auto" ? (
+                          <input
+                            type="hidden"
+                            name="fixedFxRate"
+                            value={currentSettings?.fixedFxRate ?? 150}
+                          />
+                        ) : null}
+                        <s-number-field
+                          label={t.fixedFxRate}
+                          name="fixedFxRate"
+                          step="0.01"
+                          defaultValue={currentSettings?.fixedFxRate ?? 150}
+                          disabled={selectedFxRateMode === "auto"}
+                          style={{ width: "100%" }}
+                        />
+                    </div>
+                    <div style={{ display: "grid", gap: 4 }}>
+                        <s-number-field
+                          label={t.priceAdjustmentPercent}
+                          name="priceAdjustmentPercent"
+                          step="0.01"
+                          defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
+                          style={{ width: "100%" }}
+                        />
+                        <small>{t.priceAdjustmentPercentHelp}</small>
+                    </div>
+                    <div style={{ display: "grid", gap: 4 }}>
+                        <s-number-field
+                          label={t.priceAdjustmentFixed}
+                          name="priceAdjustmentFixed"
+                          step="0.01"
+                          defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
+                          style={{ width: "100%" }}
+                        />
+                        <small>{t.priceAdjustmentFixedHelp}</small>
+                    </div>
+                    <div style={{ display: "grid", gap: 4 }}>
+                        <s-select
+                          label={t.roundRule}
+                          name="roundRule"
+                          value={currentSettings?.roundRule ?? "nearest"}
+                          style={{ width: "100%" }}
+                        >
+                          <s-option value="nearest">{t.roundNearest}</s-option>
+                          <s-option value="up">{t.roundUp}</s-option>
+                          <s-option value="down">{t.roundDown}</s-option>
+                        </s-select>
+                    </div>
+                  </div>
+                  {!priceSyncEnabledDraft ? (
+                    <s-paragraph style={{ margin: 0 }}>
+                      {lang === "ja"
+                        ? "有効にすると、為替レート方式や価格調整などの価格設定が表示されます。"
+                        : "Turn this on to show FX rate, price adjustment, and rounding settings."}
+                    </s-paragraph>
+                  ) : null}
+                </div>
+
+                <div style={{ display: settingsTab === "notify" ? "grid" : "none", gap: 16 }}>
+                  <s-url-field
+                    label={t.slackNotifyWebhookUrl}
+                    name="slackNotifyWebhookUrl"
+                    placeholder="https://hooks.slack.com/services/..."
+                    defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
+                    details={t.slackNotifyWebhookUrlHelp}
+                    style={{ width: "100%" }}
+                  />
+                  <small>
+                    {t.slackNotifyWebhookUrlHowTo}{" "}
+                    <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noreferrer">
+                      {t.slackNotifyWebhookUrlHelpLink}
+                    </a>
+                  </small>
+                </div>
+              </s-box>
+            </div>
           </>
         ) : null}
         <settingsSaveFetcher.Form method="post" action="/api/settings">
           <s-stack direction="block" gap="base" style={{ marginTop: 0 }}>
-            <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "start" }}>
-              <div style={{ display: "grid", gap: 16 }}>
-                <div style={{ display: "grid", gap: 4 }}>
-                  <input type="hidden" name="syncFrequencyMinutes" value="1440" />
-                  <s-text-field
-                    label={t.syncFrequency}
-                    value={t.nightlyBatch}
-                    disabled
-                    style={{ width: "100%" }}
-                  />
-                </div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  <span>{t.syncFields}</span>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    {syncFieldOptions.map((option) => (
-                      <s-checkbox
-                        key={option.value}
-                        label={t[option.labelKey]}
-                        name="syncFields"
-                        value={option.value}
-                        defaultChecked={currentSettings?.syncFields?.includes(option.value) ?? true}
-                      />
-                    ))}
-                  </div>
-                  <small>{t.syncFieldsHelp}</small>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      background: "#f8fafc",
-                      color: "#334155",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    <strong>{t.weightSyncNote}</strong>
-                    <div>{t.weightSyncNoteDesc}</div>
-                  </div>
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      background: "#f8fafc",
-                      color: "#334155",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    <strong>{t.imageSyncNote}</strong>
-                    <div>{t.imageSyncNoteDesc}</div>
-                  </div>
-                </div>
-                <s-url-field
-                  label={t.slackNotifyWebhookUrl}
-                  name="slackNotifyWebhookUrl"
-                  placeholder="https://hooks.slack.com/services/..."
-                  defaultValue={currentSettings?.slackNotifyWebhookUrl ?? ""}
-                  details={t.slackNotifyWebhookUrlHelp}
-                  style={{ width: "100%" }}
-                />
-                <small>
-                  {t.slackNotifyWebhookUrlHowTo}{" "}
-                  <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noreferrer">
-                    {t.slackNotifyWebhookUrlHelpLink}
-                  </a>
-                </small>
-              </div>
-
-              <div style={{ display: "grid", gap: 16 }}>
-                <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                  <input type="hidden" name="priceSyncEnabled" value="false" />
-                  <s-checkbox
-                    label={t.enablePriceSync}
-                    name="priceSyncEnabled"
-                    value="true"
-                    checked={priceSyncEnabledDraft}
-                    onChange={(event) => setPriceSyncEnabledDraft((event.target as HTMLInputElement).checked)}
-                  />
-                </div>
-                <div style={{ display: priceSyncEnabledDraft ? "grid" : "none", gap: 16 }}>
-                  <div style={{ display: "grid", gap: 4 }}>
-                      <s-select
-                        label={t.fxRateMode}
-                        name="fxRateMode"
-                        value={selectedFxRateMode}
-                        onChange={(event) =>
-                          setSelectedFxRateMode((event.target as HTMLSelectElement).value === "auto" ? "auto" : "fixed")
-                        }
-                        style={{ width: "100%" }}
-                      >
-                        <s-option value="fixed">{t.fxModeFixed}</s-option>
-                        <s-option value="auto">{t.fxModeAuto}</s-option>
-                      </s-select>
-                      <small>{t.fxModeHelp}</small>
-                      {selectedFxRateMode === "auto" ? (
-                        <small>{t.fxModeCurrentPair}: {autoFxPairLabel}</small>
-                      ) : null}
-                  </div>
-                  <div style={{ display: "grid", gap: 4 }}>
-                      {selectedFxRateMode === "auto" ? (
-                        <input
-                          type="hidden"
-                          name="fixedFxRate"
-                          value={currentSettings?.fixedFxRate ?? 150}
-                        />
-                      ) : null}
-                      <s-number-field
-                        label={t.fixedFxRate}
-                        name="fixedFxRate"
-                        step="0.01"
-                        defaultValue={currentSettings?.fixedFxRate ?? 150}
-                        disabled={selectedFxRateMode === "auto"}
-                        style={{ width: "100%" }}
-                      />
-                  </div>
-                  <div style={{ display: "grid", gap: 4 }}>
-                      <s-number-field
-                        label={t.priceAdjustmentPercent}
-                        name="priceAdjustmentPercent"
-                        step="0.01"
-                        defaultValue={currentSettings?.priceAdjustmentPercent ?? 0}
-                        style={{ width: "100%" }}
-                      />
-                      <small>{t.priceAdjustmentPercentHelp}</small>
-                  </div>
-                  <div style={{ display: "grid", gap: 4 }}>
-                      <s-number-field
-                        label={t.priceAdjustmentFixed}
-                        name="priceAdjustmentFixed"
-                        step="0.01"
-                        defaultValue={currentSettings?.priceAdjustmentFixed ?? 0}
-                        style={{ width: "100%" }}
-                      />
-                      <small>{t.priceAdjustmentFixedHelp}</small>
-                  </div>
-                  <div style={{ display: "grid", gap: 4 }}>
-                      <s-select
-                        label={t.roundRule}
-                        name="roundRule"
-                        value={currentSettings?.roundRule ?? "nearest"}
-                        style={{ width: "100%" }}
-                      >
-                        <s-option value="nearest">{t.roundNearest}</s-option>
-                        <s-option value="up">{t.roundUp}</s-option>
-                        <s-option value="down">{t.roundDown}</s-option>
-                      </s-select>
-                  </div>
-                </div>
-                {!priceSyncEnabledDraft ? (
-                  <s-paragraph style={{ margin: 0 }}>
-                    {lang === "ja"
-                      ? "有効にすると、為替レート方式や価格調整などの価格設定が表示されます。"
-                      : "Turn this on to show FX rate, price adjustment, and rounding settings."}
-                  </s-paragraph>
-                ) : null}
-              </div>
-            </div>
             <s-button type="submit" {...(settingsSaveFetcher.state !== "idle" ? { loading: true } : {})}>{t.saveSettings}</s-button>
           </s-stack>
         </settingsSaveFetcher.Form>
