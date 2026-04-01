@@ -2084,80 +2084,64 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     counters.missingCount = missingLinks.length;
 
     for (const missing of missingLinks) {
-      let nextStatus: "missing_on_ebay" | "error" = "missing_on_ebay";
-      let lastError = "SKU not detected in the latest completed full scan.";
+      const nextStatus: "missing_on_ebay" = "missing_on_ebay";
 
       const hasMapping = Boolean(missing.shopifyProductId) && Boolean(missing.shopifyVariantId);
-      if (hasMapping) {
-        if (!shopifyAdmin || !locationId) {
-          nextStatus = "error";
-          lastError =
-            "Missing Shopify admin/location context while setting missing SKU inventory to zero.";
-        } else {
-          try {
-            const inventoryRef = await getVariantInventoryRef(
-              shopifyAdmin,
-              missing.shopifyVariantId as string,
-            );
-            if (!inventoryRef.inventoryItemId) {
-              nextStatus = "error";
-              lastError = "No inventory item found for missing SKU Shopify variant.";
-            } else {
-              if (inventoryRef.tracked === false) {
-                const trackError = await ensureInventoryTracking(
-                  shopifyAdmin,
-                  inventoryRef.inventoryItemId,
+      if (hasMapping && shopifyAdmin && locationId) {
+        try {
+          const inventoryRef = await getVariantInventoryRef(
+            shopifyAdmin,
+            missing.shopifyVariantId as string,
+          );
+          if (inventoryRef.inventoryItemId) {
+            if (inventoryRef.tracked === false) {
+              const trackError = await ensureInventoryTracking(
+                shopifyAdmin,
+                inventoryRef.inventoryItemId,
+              );
+              if (trackError) {
+                console.warn(
+                  `[sync-missing] unable to enable inventory tracking for sku=${missing.sku}: ${trackError}`,
                 );
-                if (trackError) {
-                  nextStatus = "error";
-                  lastError = `Failed to enable inventory tracking: ${trackError}`;
-                }
-              }
-
-              if (nextStatus !== "error") {
-                const setQtyError = await setShopifyAvailableQuantity({
-                  admin: shopifyAdmin,
-                  inventoryItemId: inventoryRef.inventoryItemId,
-                  locationId,
-                  quantity: 0,
-                });
-                if (setQtyError) {
-                  nextStatus = "error";
-                  lastError = `Failed to set missing SKU inventory to zero: ${setQtyError}`;
-                }
               }
             }
-          } catch (error) {
-            nextStatus = "error";
-            lastError =
-              error instanceof Error
-                ? error.message
-                : "Unknown error while applying missing SKU stock=0.";
+
+            const setQtyError = await setShopifyAvailableQuantity({
+              admin: shopifyAdmin,
+              inventoryItemId: inventoryRef.inventoryItemId,
+              locationId,
+              quantity: 0,
+            });
+            if (setQtyError) {
+              console.warn(
+                `[sync-missing] unable to set missing sku=${missing.sku} inventory to zero: ${setQtyError}`,
+              );
+            }
+          } else {
+            console.warn(
+              `[sync-missing] no inventory item found for missing sku=${missing.sku} variant=${missing.shopifyVariantId}`,
+            );
           }
+        } catch (error) {
+          console.warn(
+            `[sync-missing] unexpected issue while handling missing sku=${missing.sku}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          );
         }
+      } else if (hasMapping) {
+        console.warn(
+          `[sync-missing] missing Shopify admin/location context for sku=${missing.sku}; leaving stock unchanged`,
+        );
       }
 
       await db.skuLink.update({
         where: { id: missing.id },
         data: {
           syncStatus: nextStatus,
-          lastError,
+          lastError: null,
         },
       });
-
-      if (nextStatus === "error") {
-        counters.errorCount += 1;
-        await db.syncError.create({
-          data: {
-            runId: run.id,
-            storeId: store.id,
-            ebayAccountId: ebayAccount.id,
-            sku: missing.sku,
-            errorCode: "SHOPIFY_MISSING_STOCK_ZERO_FAILED",
-            errorMessage: lastError,
-          },
-        });
-      }
     }
   }
 

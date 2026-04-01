@@ -58,6 +58,7 @@ const textMap = {
     skipped: "スキップ",
     conflicts: "競合",
     missing: "欠損",
+    missingHelp: "過去にShopifyへ同期した商品が、今回の同期ではeBayで見つからなかった件数です。",
     errors: "エラー",
     runSync: "手動同期",
     runSyncDesc: "自動同期は夜間に1回だけ実行されます。日中に確認したいときだけ、ここから手動で同期できます。",
@@ -211,6 +212,7 @@ const textMap = {
     skipped: "Skipped",
     conflicts: "Conflicts",
     missing: "Missing",
+    missingHelp: "Products previously synced to Shopify that were not found in this eBay sync.",
     errors: "Errors",
     runSync: "Manual Sync",
     runSyncDesc: "Automatic sync runs once during the night. Use this section only when you want to run a manual sync during the day.",
@@ -573,6 +575,11 @@ export default function SyncConsolePage() {
   const enqueueJson = useMemo(
     () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
     [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
+  );
+  const missingLabel = (
+    <span title={t.missingHelp} style={{ textDecoration: "underline dotted", cursor: "help" }}>
+      {t.missing}
+    </span>
   );
 
   if (!clientReady) {
@@ -1111,7 +1118,7 @@ export default function SyncConsolePage() {
           <s-box borderWidth="base" borderRadius="base" padding="base">{t.updated}: {latestRun?.updatedCount ?? 0}</s-box>
           <s-box borderWidth="base" borderRadius="base" padding="base">{t.skipped}: {latestRun?.skippedCount ?? 0}</s-box>
           <s-box borderWidth="base" borderRadius="base" padding="base">{t.conflicts}: {latestRun?.conflictCount ?? 0}</s-box>
-          <s-box borderWidth="base" borderRadius="base" padding="base">{t.missing}: {latestRun?.missingCount ?? 0}</s-box>
+          <s-box borderWidth="base" borderRadius="base" padding="base">{missingLabel}: {latestRun?.missingCount ?? 0}</s-box>
           <s-box borderWidth="base" borderRadius="base" padding="base">{t.errors}: {latestRun?.errorCount ?? 0}</s-box>
         </div>
         <div style={{ marginTop: 16 }}>
@@ -1132,7 +1139,7 @@ export default function SyncConsolePage() {
                       <th align="left">{t.created}</th>
                       <th align="left">{t.updated}</th>
                       <th align="left">{t.errors}</th>
-                      <th align="left">{t.missing}</th>
+                      <th align="left">{missingLabel}</th>
                     </tr>
                   </thead>
                   <tbody>
