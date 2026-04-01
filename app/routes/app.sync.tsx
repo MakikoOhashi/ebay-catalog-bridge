@@ -787,7 +787,18 @@ export default function SyncConsolePage() {
                     ))}
                   </div>
                   <small>{t.syncFieldsHelp}</small>
-                  <small style={{ lineHeight: 1.6 }}>{t.weightSyncNote}: {t.weightSyncNoteDesc}</small>
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: "#f8fafc",
+                      color: "#334155",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <strong>{t.weightSyncNote}</strong>
+                    <div>{t.weightSyncNoteDesc}</div>
+                  </div>
                   <div
                     style={{
                       padding: "10px 12px",
