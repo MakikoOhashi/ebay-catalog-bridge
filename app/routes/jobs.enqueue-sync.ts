@@ -1021,12 +1021,12 @@ async function setShopifyAvailableQuantity(input: {
       input: {
         name: "available",
         reason: "correction",
-        ignoreCompareQuantity: true,
         quantities: [
           {
             inventoryItemId: input.inventoryItemId,
             locationId: input.locationId,
             quantity: input.quantity,
+            changeFromQuantity: null,
           },
         ],
       },
