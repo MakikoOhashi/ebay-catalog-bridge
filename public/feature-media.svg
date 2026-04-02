@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">eBay Catalog Bridge feature media</title>
+  <desc id="desc">Promotional image showing eBay catalog sync, four-account support, one-way sync, pricing, weight, and Slack notifications.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e6fffb" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#eef6ff" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#0ea5a4" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)" />
+  <circle cx="1380" cy="130" r="210" fill="#ccfbf1" opacity="0.75" />
+  <circle cx="230" cy="810" r="180" fill="#bfdbfe" opacity="0.45" />
+  <circle cx="1500" cy="820" r="140" fill="#fed7aa" opacity="0.55" />
+
+  <g transform="translate(90 86)">
+    <rect x="0" y="0" width="92" height="92" rx="24" fill="#ffffff" filter="url(#soft)" />
+    <g transform="translate(18 18) scale(1.05)">
+      <path
+        fill="#0F766E"
+        d="M0,14.016v24.212l2.992-0.003v-0.818c0-10.387,10.376-18.84,23.129-18.84c12.754,0,23.129,8.453,23.129,18.84v0.82h2.992
+        V14.014L0,14.016L0,14.016z M5.098,26.595c-1.741,2.305-2.943,4.911-3.459,7.707V15.656h3.459V26.595z M11.65,20.801
+        c-1.846,1.1-3.498,2.408-4.916,3.879v-9.023h4.916V20.801z M40.047,19.121c-3.973-1.354-8.77-2.147-13.926-2.147
+        c-4.695-0.002-9.087,0.654-12.833,1.793v-2.565h26.759C40.047,16.201,40.047,19.121,40.047,19.121z M46.6,25.9
+        c-1.455-1.765-3.236-3.327-5.27-4.642h0.354v-5.603H46.6V25.9z M50.606,34.299c-0.4-2.164-1.213-4.217-2.367-6.104v-12.54h2.367
+        V34.299z"
+      />
+    </g>
+
+    <text x="124" y="36" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#0f172a">
+      ebay-catalog-bridge
+    </text>
+    <text x="124" y="68" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" fill="#475569">
+      eBay catalog sync for Shopify stores
+    </text>
+
+    <text x="0" y="210" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="62" font-weight="800" fill="#0f172a">
+      eBayの商品情報を
+    </text>
+    <text x="0" y="286" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="62" font-weight="800" fill="#0f172a">
+      SKU基準で一方向同期
+    </text>
+
+    <text x="0" y="360" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24" fill="#334155">
+      商品名・説明文・画像・重量・在庫・価格をまとめて反映
+    </text>
+    <text x="0" y="398" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24" fill="#334155">
+      1ストアに最大4つのeBayアカウントを接続できます
+    </text>
+
+    <g transform="translate(0 462)">
+      <rect x="0" y="0" width="192" height="54" rx="18" fill="#ffffff" stroke="#cbd5e1" />
+      <circle cx="26" cy="27" r="10" fill="#0f766e" />
+      <text x="48" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        最大4アカウント
+      </text>
+
+      <rect x="214" y="0" width="168" height="54" rx="18" fill="#ffffff" stroke="#cbd5e1" />
+      <circle cx="240" cy="27" r="10" fill="#fb923c" />
+      <text x="262" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        一方向同期
+      </text>
+
+      <rect x="404" y="0" width="162" height="54" rx="18" fill="#ffffff" stroke="#cbd5e1" />
+      <circle cx="430" cy="27" r="10" fill="#2563eb" />
+      <text x="452" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        Slack通知
+      </text>
+    </g>
+  </g>
+
+  <g transform="translate(890 92)" filter="url(#shadow)">
+    <rect x="0" y="0" width="610" height="716" rx="32" fill="url(#panel)" />
+    <rect x="0" y="0" width="610" height="82" rx="32" fill="#ffffff" />
+    <rect x="0" y="58" width="610" height="24" fill="#ffffff" />
+    <text x="34" y="50" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800" fill="#0f172a">
+      Sync Console
+    </text>
+    <rect x="462" y="22" width="118" height="38" rx="12" fill="#0f172a" />
+    <text x="521" y="47" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#ffffff">
+      保存済み
+    </text>
+
+    <g transform="translate(28 110)">
+      <rect x="0" y="0" width="554" height="110" rx="22" fill="#ffffff" />
+      <text x="22" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        1. eBayアカウントを接続する
+      </text>
+      <rect x="22" y="56" width="246" height="34" rx="12" fill="#ecfeff" stroke="#99f6e4" />
+      <text x="38" y="78" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0f766e">
+        接続済み 1 / 4
+      </text>
+      <rect x="300" y="56" width="232" height="34" rx="12" fill="#f8fafc" stroke="#cbd5e1" />
+      <text x="316" y="78" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" fill="#475569">
+        mm.msc76 / primary
+      </text>
+    </g>
+
+    <g transform="translate(28 240)">
+      <rect x="0" y="0" width="268" height="194" rx="22" fill="#ffffff" />
+      <text x="22" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        同期設定
+      </text>
+      <text x="22" y="68" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" fill="#475569">
+        毎日1回（夜間）
+      </text>
+      <rect x="22" y="92" width="104" height="32" rx="10" fill="#ecfeff" />
+      <text x="74" y="113" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f766e">
+        images
+      </text>
+      <rect x="136" y="92" width="104" height="32" rx="10" fill="#ecfeff" />
+      <text x="188" y="113" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f766e">
+        weight
+      </text>
+      <rect x="22" y="136" width="218" height="36" rx="12" fill="#f8fafc" stroke="#cbd5e1" />
+      <text x="40" y="159" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" fill="#334155">
+        SKUで商品を追跡
+      </text>
+    </g>
+
+    <g transform="translate(314 240)">
+      <rect x="0" y="0" width="268" height="194" rx="22" fill="#ffffff" />
+      <text x="22" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        価格設定
+      </text>
+      <text x="22" y="68" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="16" fill="#475569">
+        Auto Fetch (Frankfurter)
+      </text>
+      <text x="22" y="100" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="32" font-weight="800" fill="#0f172a">
+        1 USD = 159.46 JPY
+      </text>
+      <rect x="22" y="126" width="96" height="32" rx="10" fill="#eff6ff" />
+      <text x="70" y="147" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1d4ed8">
+        価格同期 ON
+      </text>
+    </g>
+
+    <g transform="translate(28 458)">
+      <rect x="0" y="0" width="554" height="142" rx="22" fill="#ffffff" />
+      <text x="22" y="34" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#0f172a">
+        実行結果
+      </text>
+      <rect x="22" y="54" width="168" height="58" rx="16" fill="url(#accent)" />
+      <text x="44" y="77" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#ccfbf1">
+        最新の同期
+      </text>
+      <text x="44" y="100" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800" fill="#ffffff">
+        succeeded
+      </text>
+
+      <rect x="214" y="54" width="150" height="58" rx="16" fill="#f8fafc" stroke="#cbd5e1" />
+      <text x="236" y="77" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#64748b">
+        更新
+      </text>
+      <text x="236" y="100" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800" fill="#0f172a">
+        2
+      </text>
+
+      <rect x="386" y="54" width="168" height="58" rx="16" fill="#f8fafc" stroke="#cbd5e1" />
+      <text x="408" y="77" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#64748b">
+        エラー
+      </text>
+      <text x="408" y="100" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800" fill="#0f172a">
+        0
+      </text>
+    </g>
+
+    <g transform="translate(28 624)">
+      <rect x="0" y="0" width="554" height="58" rx="18" fill="#0f172a" />
+      <text x="32" y="36" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">
+        商品一覧・設定・通知を1画面で確認
+      </text>
+    </g>
+  </g>
+</svg>
