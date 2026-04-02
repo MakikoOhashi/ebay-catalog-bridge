@@ -1,6 +1,28 @@
 # ebay-catalog-bridge
 
-`ebay-catalog-bridge` is a Shopify embedded app that syncs catalog data from eBay seller accounts into a single Shopify store.
+`ebay-catalog-bridge` is a Shopify embedded app that syncs catalog data from up to 4 eBay seller accounts into a single Shopify store.
+
+## What It Does
+
+- One-way sync from eBay to Shopify
+- SKU-based matching and upsert
+- Catalog sync for title, description, images, weight, stock, and optional price
+- Store-specific Slack notifications for sync issues and test alerts
+- Embedded Shopify admin UI for account connection, sync settings, manual sync, and run history
+
+## Core Behavior
+
+- The app syncs **from eBay to Shopify only**.
+- Changes made in Shopify are **not** synced back to eBay.
+- If a Shopify product with the same SKU already exists, the app updates that product instead of creating a duplicate.
+- If multiple Shopify variants match the same SKU, the sync stops for that SKU and records an error instead of guessing.
+- When an eBay SKU is no longer found, the Shopify product is left in place and treated as `missing_on_ebay`. If the missing-item option is enabled for that sync, the app sets Shopify inventory to `0` instead of deleting the product.
+
+## eBay Accounts
+
+- One Shopify store can connect up to **4** eBay accounts.
+- Products synced by the app receive an eBay account tag and eBay item ID tag.
+- If the same SKU is detected in multiple eBay accounts, the app records a conflict and does not auto-merge them.
 
 ## Price Conversion
 
@@ -12,6 +34,7 @@ This app stores prices in the Shopify store currency.
 - The current implementation assumes eBay source prices are in USD and converts them into the Shopify store currency.
 - The rounding rule is applied after conversion.
 - In auto mode, the FX rate is refreshed during the automatic sync batch and then reused until the next refresh window.
+- Sync settings currently use a nightly automatic batch in the UI.
 
 Example:
 
@@ -37,19 +60,28 @@ Recommended operating model:
 
 Image sync is capped at 20 images per product to avoid duplicate additions and media bloat.
 
+## Data Storage and Uninstall
+
+The app stores store-scoped sync data in Postgres via Prisma, including:
+
+- connected eBay accounts
+- SKU links
+- sync runs and sync errors
+- conflict records
+- sync settings and Slack webhook configuration
+
+When the app is uninstalled:
+
+- Shopify sessions are deleted
+- the store record is deleted
+- related store-scoped sync data is deleted by cascade
+- Shopify products created or updated by the app are **not** deleted
+
 ## Catalog Size Guidance
 
 For stable operation, we recommend keeping the total Shopify SKU count at **49,000 or below**.
 
 Once a store grows beyond 50,000 variants, Shopify platform limits can materially change how initial imports and new variant creation need to be scheduled. Stores above that scale may require a separate import strategy and more conservative batch planning.
-
-## Future Pricing Options
-
-The pricing model is intentionally simple for v1. Planned extensions include:
-
-- automatic FX refresh on a schedule
-- markup rules such as `eBay price + 10%`
-- more flexible rounding profiles
 
 ## Base Template Notes
 
@@ -132,21 +164,8 @@ For more information on the Shopify Dev MCP please read [the documentation](http
 
 ### Application Storage
 
-This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.
-The database is defined as a Prisma schema in `prisma/schema.prisma`.
-
-This use of SQLite works in production if your app runs as a single instance.
-The database that works best for you depends on the data your app needs and how it is queried.
-Here’s a short list of databases providers that provide a free tier to get started:
-
-| Database   | Type             | Hosters                                                                                                                                                                                                                                    |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| MySQL      | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mysql), [Planet Scale](https://planetscale.com/), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/mysql) |
-| PostgreSQL | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-postgresql), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/postgres)                                   |
-| Redis      | Key-value        | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-redis), [Amazon MemoryDB](https://aws.amazon.com/memorydb/)                                                                                                        |
-| MongoDB    | NoSQL / Document | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mongodb), [MongoDB Atlas](https://www.mongodb.com/atlas/database)                                                                                                  |
-
-To use one of these, you can use a different [datasource provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#datasource) in your `schema.prisma` file, or a different [SessionStorage adapter package](https://github.com/Shopify/shopify-api-js/blob/main/packages/shopify-api/docs/guides/session-storage.md).
+This app uses [Prisma](https://www.prisma.io/) with PostgreSQL. In this project, Supabase-backed Postgres is the intended production database.
+The database schema is defined in `prisma/schema.prisma`.
 
 ### Build
 

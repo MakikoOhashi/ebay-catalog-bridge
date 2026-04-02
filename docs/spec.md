@@ -108,18 +108,19 @@ ebay-catalog-bridge は、最大4つのeBay sellerアカウントの商品情報
 
 - Price sync: ON/OFF
 
-### 9.2 ONの場合の必須仕様
+### 9.2 ONの場合の仕様
 
-- 通貨変換を必ず実行する
-- v1は 固定レート方式のみ
+- 通貨変換を実行する
+- v1では 固定レート方式 と 自動取得方式 をサポートする
+- 自動取得方式では Frankfurter を使って USD から Shopify ストア通貨へのレートを取得する
 - 例：1 USD = 150 JPY
-- 丸めルールは設定可能（v1は最小でOK）
+- 丸めルールは設定可能
+- 割引/マークアップ（%）および固定額調整をサポートする
 
 ### 9.3 将来拡張（v1.1+）
 
-- 自動FX（外部参照）
-- 割引/マークアップ（%）
 - 価格帯別ルール
+- より柔軟な丸めルール
 
 ## 10. GTC（Good ’Til Cancelled）
 
@@ -235,7 +236,8 @@ ebay-catalog-bridge は、最大4つのeBay sellerアカウントの商品情報
 
 ### 14.2 Shopify Webhooks
 
-- v1：必須webhookなし（インストール/アンインストール除く）
+- v1：`app/scopes_update` と `app/uninstalled`
+- uninstall時は Shopify session とストア単位の内部同期データを削除する
 - v1.5：orders/create → inventory task作成（enqueueして即200）
 
 ## 15. 管理UI（Shopify Admin Embedded）
