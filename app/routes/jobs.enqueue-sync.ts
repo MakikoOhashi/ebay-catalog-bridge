@@ -1006,11 +1006,14 @@ async function setShopifyAvailableQuantity(input: {
   locationId: string;
   quantity: number;
 }): Promise<string | null> {
+  const idempotencyKey =
+    globalThis.crypto?.randomUUID?.() ||
+    `inventory-set-${input.inventoryItemId}-${input.locationId}-${input.quantity}-${Date.now()}`;
   const json = await graphqlJson(
     input.admin,
     `#graphql
       mutation setInventory($input: InventorySetQuantitiesInput!) {
-        inventorySetQuantities(input: $input) {
+        inventorySetQuantities(input: $input) @idempotent(key: "${idempotencyKey}") {
           userErrors {
             field
             message
