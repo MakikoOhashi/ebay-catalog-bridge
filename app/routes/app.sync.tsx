@@ -600,6 +600,10 @@ export default function SyncConsolePage() {
     displaySettings?.autoFxLastRate != null && autoFxTargetCurrency
       ? `1 USD = ${displaySettings.autoFxLastRate} ${autoFxTargetCurrency}`
       : "-";
+  const slackWebhookHelpUrl =
+    lang === "ja"
+      ? "https://quiet-thrill-c13.notion.site/Slack-Webhook-335c3eba44cb80a9b0d8c7295941dbd9?pvs=74"
+      : "https://quiet-thrill-c13.notion.site/Slack-Webhook-Setup-Guide-335c3eba44cb80caadabc03235947983?pvs=74";
   const enqueueJson = useMemo(
     () => pretty(manualSyncResult ?? enqueueFetcher.data, t.noEnqueueRequested),
     [manualSyncResult, enqueueFetcher.data, t.noEnqueueRequested],
@@ -996,7 +1000,7 @@ export default function SyncConsolePage() {
                   />
                   <small>
                     {t.slackNotifyWebhookUrlHowTo}{" "}
-                    <a href="https://quiet-thrill-c13.notion.site/Slack-Webhook-335c3eba44cb80a9b0d8c7295941dbd9?pvs=74" target="_blank" rel="noreferrer">
+                    <a href={slackWebhookHelpUrl} target="_blank" rel="noreferrer">
                       {t.slackNotifyWebhookUrlHelpLink}
                     </a>
                   </small>
